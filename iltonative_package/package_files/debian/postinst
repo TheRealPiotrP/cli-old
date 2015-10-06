@@ -78,7 +78,7 @@ copy_runtime_and_native_nuget_assets(){
         echo "Invalid Output directory"
     fi
 
-    assembly_paths=( $(/usr/bin/python ${INSTALL_ROOT}/scripts/resolve_nuget_assets.py -f "DNXCore,Version=v5.0" -r "ubuntu.14.04-x64" -n -p ${NUGET_PACKAGE_CACHE} ${project_lock_json_path}) )
+    assembly_paths=( $(python ${INSTALL_ROOT}/scripts/resolve_nuget_assets.py -f "DNXCore,Version=v5.0" -r "ubuntu.14.04-x64" -l -n -p ${NUGET_PACKAGE_CACHE} ${project_lock_json_path}) )
         
     for assembly_path in "${assembly_paths[@]}"
     do

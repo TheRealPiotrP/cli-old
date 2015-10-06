@@ -93,7 +93,7 @@ test_manpage_generator(){
 }
 
 
-#Test Help Message (Baseline Test)
+#Baseline Test
 test_dotnet-compile-native_exists(){
 	output=$(dotnet-compile-native)
 
@@ -103,6 +103,21 @@ test_dotnet-compile-native_exists(){
 		return 1
 	fi
 	return 0
+}
+
+test_dotnet-compile-native_hello(){
+
+	cp ${INSTALL_ROOT}/samples/hello.dll /tmp/hello.dll
+	
+	dotnet-compile-native /tmp/hello.dll /tmp
+
+	output=$(/tmp/hello)
+
+	if [[ "$output" == "Hello" ]]; then
+		return 0
+	fi
+
+	return 1
 }
 
 test_coreclr_exists(){
