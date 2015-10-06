@@ -110,7 +110,7 @@ restore_and_resolve_install_packages(){
 }
 
 create_symlinks(){
-    ln -s /usr/bin/dotnet-compile-native ${INSTALL_ROOT}/builtins/dotnet-compile-native
+    ln -s ${INSTALL_ROOT}/builtins/dotnet-compile-native /usr/bin/dotnet-compile-native
 }
 
 do_install(){
