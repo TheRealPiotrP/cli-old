@@ -186,7 +186,7 @@ generate_manpages(){
 
     # Clean the docs folder
     rm -r $docs_dir
-    mkdir $docs_dir
+    mkdir -p $docs_dir
     
     # Generate the manpages from json spec
     python ./build_tools/manpage_generator.py ${DOCS_JSON_PATH} ${docs_dir}
@@ -200,7 +200,7 @@ generate_manpages(){
     for manpage in $generated_manpages
     do
         # Only put files in manifest
-        if [ -f "${debian_dir}/${manpage}" ]; then
+        if [ -f "./src/${manpage}" ]; then
             echo "$manpage" >> "${debian_dir}/${PACKAGE_NAME}.manpages"
         fi
     done
