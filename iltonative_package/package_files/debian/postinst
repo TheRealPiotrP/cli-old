@@ -21,6 +21,12 @@ set -e
 # Bring in Properties
 source /usr/share/dotnet-compile-native/config/config.shprops
 
+# DNX/DNVM Configuration
+DNX_HOME=$INSTALL_ROOT/dnx
+DNX_USER_HOME=$DNX_HOME
+DNX_GLOBAL_HOME=$DNX_HOME
+DNVM_SOURCE="https://raw.githubusercontent.com/aspnet/Home/dev/dnvm.sh"
+
 set_installed_files_permissions(){
 
     # Set Ownership to root, of everything
