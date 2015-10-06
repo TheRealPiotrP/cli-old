@@ -9,6 +9,9 @@ debian_dir="${package_dir}/debian"
 native_binaries_path="NativeCompilation"
 native_binaries_install_path="native" # relative to $INSTALL_ROOT
 
+builtins_path="builtins"
+builtins_install_path="builtins"
+
 # Used to keep state for add_install_placement function
 placement_index=0
 
@@ -127,6 +130,10 @@ package_native() {
     add_dir_to_install ${native_binaries_path} ${native_binaries_install_path}
 }
 
+package_builtins(){
+    add_dir_to_install ${builtins_path} ${builtins_install_path}
+}
+
 package_scripts(){
     add_dir_to_install "./scripts" "scripts"
 }
@@ -161,6 +168,7 @@ package_standard_libraries(){
 package_all() {
     package_native
     package_nuget_client
+    package_builtins
     package_samples
     package_docs
     package_standard_libraries
