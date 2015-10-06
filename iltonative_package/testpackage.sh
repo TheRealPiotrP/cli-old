@@ -21,7 +21,7 @@ test_build_package(){
 }
 
 test_package_installed(){
-	$(dpkg -s "${PACKAGE_NAME}")
+	dpkg -s "${PACKAGE_NAME}" > /dev/null 2>&1
 	return $?
 }
 
@@ -39,7 +39,8 @@ echo_yellow(){
 
 #Remove the package
 remove_package(){
-	apt-get remove -y dotnet
+	apt-get remove -y ${PACKAGE_NAME} 
+	
 }
 
 install_package() {
@@ -95,11 +96,10 @@ test_manpage_generator(){
 
 #Baseline Test
 test_dotnet-compile-native_exists(){
-	output=$(dotnet-compile-native)
+	hash dotnet-compile-native 2>/dev/null
 
 	if [ "$?" != "0" ]; then
-		echo "dotnet-compile-native failed:"
-		echo $output
+		echo "dotnet-compile-native does not exist on the path"
 		return 1
 	fi
 	return 0
@@ -109,15 +109,53 @@ test_dotnet-compile-native_hello(){
 
 	cp ${INSTALL_ROOT}/samples/hello.dll /tmp/hello.dll
 	
-	dotnet-compile-native /tmp/hello.dll /tmp
+	dotnet-compile-native /tmp/hello.dll /tmp > /dev/null
 
 	output=$(/tmp/hello)
 
-	if [[ "$output" == "Hello" ]]; then
+	if [[ "$output" == "Hello"* ]]; then
 		return 0
 	fi
-
+	
+	echo $output
 	return 1
+}
+
+test_dotnet-compile-native_badassembly(){
+	echo "This is a bad assembly" > /tmp/bad.dll
+
+	dotnet-compile-native /tmp/bad.dll /tmp > /dev/null 2>&1
+
+	if [[ "$?" == "0" ]]; then
+		echo "dotnet-compile-native did not fail with a bad assembly"
+		return 1
+	fi
+
+	return 0
+}
+
+test_dotnet-compile-native_badoutputdir(){
+	echo "This is actually a file" > /tmp/baddir
+	cp ${INSTALL_ROOT}/samples/hello.dll /tmp/hello.dll
+
+	dotnet-compile-native /tmp/hello.dll /tmp/baddir
+
+	if [[ "$?" == 0 ]]; then
+		echo "dotnet-compile-native did not fail with a bad output directory"
+		return 1
+	fi
+
+	return 0
+}
+
+test_dotnet-compile-native_manpage_exists(){
+	man dotnet-compile-native > /dev/null 2>&1
+
+	if [[ "$?" != "0" ]]; then
+		echo "man dotnet-compile-native fails"
+		return 1
+	fi
+	return 0
 }
 
 test_coreclr_exists(){
@@ -143,6 +181,7 @@ run_test_function() {
 
 	if [ "$?" != 0 ]; then
 		echo_red "$test_command failed"
+		echo_red "$test_command output: $output"
 		exit 1
 	else
 		echo_green "$test_command succeeded"
@@ -166,14 +205,25 @@ run_tests(){
 		fi
 	fi
 	
-	echo_yellow "Running All Tests..."
+	echo_yellow "Running Preinstallation Tests"
 
-	# Run all tests
 	run_test_function test_manpage_generator
+	
+	echo_yellow "Running Build And Install"
+	
 	run_test_function test_build_package
 	run_test_function install_package
-	run_test_function test_dotnet-compile-native_exists
+	
+	echo_yellow "Running PostInstallation Tests"
+	
 	run_test_function test_coreclr_exists
+	run_test_function test_dotnet-compile-native_manpage_exists
+	run_test_function test_dotnet-compile-native_exists
+	run_test_function test_dotnet-compile-native_hello
+	run_test_function test_dotnet-compile-native_badassembly
+	run_test_function test_dotnet-compile-native_badoutputdir
+
+	echo_yellow "Running Package Removal"
 	
 	# Test package removal
 	run_test_function remove_package

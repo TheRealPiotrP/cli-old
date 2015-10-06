@@ -26,6 +26,11 @@ il_to_cpp(){
 
 	full_command="$corerun $il_to_cpp $il_to_cpp_args -out $intermediate_cpp_file $il_assembly_file"	
 	$full_command > /dev/null
+	
+	if [[ "$?" != "0" ]]; then
+		echo "IL to CPP Conversion failed"
+		return 1
+	fi
 
 	echo $intermediate_cpp_file
 }
@@ -44,6 +49,12 @@ cpp_to_native(){
 	full_command="clang-3.5 $c_flags $c_includes $cpp_file $c_libs -o $output_file"
 
 	$full_command > /dev/null
+	
+	if [[ "$?" != "0" ]]; then
+		echo "CPP to Native Conversion Failed"
+		return 1
+	fi
+	
 	chmod u+x $output_file
 
 	echo $output_file
@@ -63,13 +74,27 @@ validate_args(){
 	fi
 }
 
+do_conversion(){
+	echo "Converting $1 to native"
+
+	tmp_cpp_file="$(il_to_cpp "$1")"
+
+	if [[ "$?" != "0" ]]; then
+		echo $tmp_cpp_file
+		exit 1
+	fi
+
+	output_executable="$(cpp_to_native "$tmp_cpp_file" "$2")"
+
+	if [[ "$?" != "0" ]]; then 
+		echo $output_executable
+		exit 1
+	fi
+
+	echo "native output: $output_executable"
+}
+
 validate_args $@
-
-echo "Converting $1 to native"
-
-tmp_cpp_file="$(il_to_cpp "$1")"
-output_executable="$(cpp_to_native "$tmp_cpp_file" "$2")"
-
-echo "native output: $output_executable"
+do_conversion $@
 
 exit 0
