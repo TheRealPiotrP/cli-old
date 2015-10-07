@@ -1,0 +1,12 @@
+Source: dotnet-compile-native
+Maintainer: Microsoft <optimus@service.microsoft.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>=9)
+
+Package: dotnet-compile-native
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, clang-3.5, libunwind8, curl, libcurl4-openssl-dev
+Description: dotnet-compile-native aptitude package
+

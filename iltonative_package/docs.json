@@ -1,0 +1,19 @@
+{
+	"tools": {
+		"dotnet-compile-native": { 
+			"copyright": "https://github.com/dotnet/coreclr/blob/master/LICENSE.TXT",
+			"license" : "https://github.com/dotnet/coreclr/blob/master/LICENSE.TXT",
+			"author":"Microsoft",
+			"author_email":"optimus@service.microsoft.com",
+			"short_description":"A tool for compiling IL to native code.",
+			"long_description":"",
+			"commands": {     
+				"il_assembly":{
+					"description":"Builds a native executable from the specified IL assembly"
+				}
+				
+			}
+		
+		}
+	}
+}

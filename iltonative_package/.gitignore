@@ -1,0 +1,12 @@
+*.dsc
+*.tar.gz
+*.build
+*.changes
+*.deb
+*.pyc
+*.pyo
+
+
+dotnet-compile-native-*/*
+
+./src/*
