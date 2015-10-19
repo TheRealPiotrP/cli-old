@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+DNVM_PATH=$1
+STAGE0_DIR=$2
+
+# Load dnvm2
+export DOTNET_USER_HOME=$STAGE0_DIR
+export DOTNET_GLOBAL_HOME=$STAGE0_DIR
+mkdir -p "$STAGE0_DIR"
+
+source "$DNVM_PATH"
+
+# Install dnvm locally to stage0 directory
+dnvm install -f latest -alias stage0
+
+NAME=$(dnvm alias stage0)
+mv "$STAGE0_DIR/runtimes/$NAME/" "$STAGE0_DIR/bin"

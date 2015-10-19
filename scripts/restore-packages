@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+REPOROOT=$1
+STAGE0_DIR=$2
+
+curl https://raw.githubusercontent.com/aspnet/Home/dev/dnvm.sh -o "$STAGE0_DIR/dnvm.sh"
+source "$STAGE0_DIR/dnvm.sh"
+
+echo "Installing and use-ing the latest CoreCLR x64 DNX ..."
+dnvm install latest -u -r coreclr -alias dotnet_bootstrap
+rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
+
+dnvm use dotnet_bootstrap -r coreclr -arch x64
+rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
+
+type -p dnx >/dev/null
+if [ ! $? ]; then
+    echo "DNX is required to bootstrap stage1" 1>&2
+    exit 1
+fi
+
+echo "Running 'dnu restore' to restore packages for DNX-hosted projects"
+
+dnu restore "$REPOROOT" --runtime osx.10.10-x64 --runtime ubuntu.14.04-x64 --runtime osx.10.11-x64

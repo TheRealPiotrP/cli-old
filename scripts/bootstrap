@@ -9,8 +9,6 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 REPOROOT="$( cd -P "$DIR/.." && pwd )"
 
-echo "Bootstrapping dotnet.exe using DNX"
-
 if [ -z "$RID" ]; then
     UNAME=$(uname)
     if [ "$UNAME" == "Darwin" ]; then
@@ -31,51 +29,29 @@ STAGE2_DIR=$OUTPUT_ROOT/stage2
 
 echo "Cleaning artifacts folder"
 rm -rf $OUTPUT_ROOT
-
-
-STAGE0_PUBLISH=$REPOROOT/scripts/stage0/dotnet-publish
+mkdir -p "$STAGE0_DIR"
 
 export DOTNET_CLR_HOSTS_PATH=$REPOROOT/ext/CLRHost/$RID
 
-if ! type dnvm > /dev/null 2>&1; then
-    curl -sSL https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.sh | DNX_BRANCH=dev sh && source ~/.dnx/dnvm/dnvm.sh
-fi
+echo "Restoring packages using DNU (for now)"
+$DIR/restore-packages "$REPOROOT" "$STAGE0_DIR"
 
-echo "Installing and use-ing the latest CoreCLR x64 DNX ..."
-dnvm install latest -u -r coreclr -alias dotnet_bootstrap
-rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
+echo "Installing stage0 dotnet"
+$DIR/install-stage0 "$DIR/dnvm2.sh" "$STAGE0_DIR"
 
-dnvm use dotnet_bootstrap -r coreclr -arch x64
-rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-
-type -p dnx >/dev/null
-if [ ! $? ]; then
-    echo "DNX is required to bootstrap stage1" 1>&2
-    exit 1
-fi
-
-echo "Running 'dnu restore' to restore packages for DNX-hosted projects"
-
-dnu restore "$REPOROOT" --runtime osx.10.10-x64 --runtime ubuntu.14.04-x64 --runtime osx.10.11-x64
-
-# symlink mcs to csc for bootstrapping (requires mono :()
-mkdir -p $STAGE0_DIR
-ln -s `(which mcs)` $STAGE0_DIR/csc
-export PATH=$PATH:$STAGE0_DIR
-
-# Clean up stage1
-[ -d "$STAGE1_DIR" ] && rm -Rf "$STAGE1_DIR"
+# Manually put it on the path, because DNVM ran inside a sub-process
+PATH=$STAGE0_DIR/bin:$PATH
 
 echo "Building basic dotnet tools using Stage 0 (DNX hosted)"
-$STAGE0_PUBLISH --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Cli"
+dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Cli"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-$STAGE0_PUBLISH --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler"
+dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-$STAGE0_PUBLISH --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler.Csc"
+dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler.Csc"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-$STAGE0_PUBLISH --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Publish"
+dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Publish"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-$STAGE0_PUBLISH --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Resgen"
+dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE1_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Resgen"
 
 # Add stage1 to the path and use it to build stage2
 export PATH=$STAGE1_DIR:$PATH
