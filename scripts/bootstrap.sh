@@ -51,27 +51,26 @@ $DIR/install-stage0.sh $STAGE0_DIR $DIR/dnvm2.sh
 
 export PATH=$STAGE0_DIR/bin:$PATH
 
+export DOTNET_CLR_HOSTS_PATH=$REPOROOT/ext/CLRHost/$RID
+
+echo "Installing and use-ing the latest CoreCLR x64 DNX ..."
+mkdir -p $DNX_DIR
+
+export DNX_HOME=$DNX_DIR
+export DNX_USER_HOME=$DNX_DIR
+export DNX_GLOBAL_HOME=$DNX_DIR
+
+if ! type dnvm > /dev/null 2>&1; then
+    curl -o $DNX_DIR/dnvm.sh https://raw.githubusercontent.com/aspnet/Home/dev/dnvm.sh
+    source $DNX_DIR/dnvm.sh
+fi
+
+dnvm install latest -u -r coreclr
+
+# Make sure we got a DNX
 if ! type dnx > /dev/null 2>&1; then
-    echo "Installing and use-ing the latest CoreCLR x64 DNX ..."
-    mkdir -p $DNX_DIR
-
-    export DNX_HOME=$DNX_DIR
-    export DNX_USER_HOME=$DNX_DIR
-    export DNX_GLOBAL_HOME=$DNX_DIR
-
-    if ! type dnvm > /dev/null 2>&1; then
-        curl -o $DNX_DIR/dnvm.sh https://raw.githubusercontent.com/aspnet/Home/dev/dnvm.sh
-        source $DNX_DIR/dnvm.sh
-    fi
-
-    dnvm install latest -u -r coreclr
-    rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-
-    # Make sure we got a DNX
-    if ! type dnx > /dev/null 2>&1; then
-        echo "DNX is required to bootstrap stage1" 1>&2
-        exit 1
-    fi
+    echo "DNX is required to bootstrap stage1" 1>&2
+    exit 1
 fi
 
 echo "Running 'dnu restore' to restore packages"
@@ -129,3 +128,16 @@ if [ $rc == 0 ]; then
     exit 1
 fi
 set -e
+
+# Copy DNX in to stage2
+DNX_ROOT=$(dirname $(which dnx))
+cp -R $DNX_ROOT $STAGE2_DIR/dnx
+
+# Clean up some things we don't need
+rm -Rf $STAGE2_DIR/dnx/lib/Microsoft.Dnx.DesignTimeHost
+rm -Rf $STAGE2_DIR/dnx/lib/Microsoft.Dnx.Project
+rm $STAGE2_DIR/dnx/dnu
+
+# Copy and CHMOD the dotnet-restore script
+cp $DIR/dotnet-restore.sh $STAGE2_DIR/dotnet-restore
+chmod a+x $STAGE2_DIR/dotnet-restore

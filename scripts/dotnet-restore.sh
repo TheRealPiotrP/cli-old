@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-
-set -e
+# dotnet-restore script to be copied across to the final package
 
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
@@ -10,10 +9,7 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-# Create Dnvm Package
-$DIR/package-dnvm.sh
+# work around restore timeouts on Mono
+[ -z "$MONO_THREADS_PER_CPU" ] && export MONO_THREADS_PER_CPU=50
 
-if [[ "$1" == "debian" ]]; then
-    # Create Debian package
-    $DIR/package-debian.sh
-fi
+exec "$DIR/dnx/dnx" "$DIR/lib/Microsoft.Dnx.Tooling/Microsoft.Dnx.Tooling.dll" "restore" "$@"
