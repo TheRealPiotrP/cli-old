@@ -66,23 +66,23 @@ set PATH=%STAGE1_DIR%;%PATH%
 if exist %STAGE2_DIR% rd /s /q %STAGE2_DIR%
 
 echo Building stage2 dotnet.exe ...
-dotnet publish --framework dnxcore50 --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Cli"
+dotnet compile --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Cli"
 if errorlevel 1 goto fail
 
 echo Building stage2 dotnet-compile.exe ...
-dotnet publish --framework dnxcore50 --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Compiler"
+dotnet compile --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Compiler"
 if errorlevel 1 goto fail
 
 echo Building stage2 dotnet-compile-csc.exe ...
-dotnet publish --framework dnxcore50 --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Compiler.Csc"
+dotnet compile --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Compiler.Csc"
 if errorlevel 1 goto fail
 
 echo Building stage2 dotnet-publish.exe ...
-dotnet publish --framework dnxcore50 --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Publish"
+dotnet compile --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Publish"
 if errorlevel 1 goto fail
 
 echo Building stage2 dotnet-publish.exe ...
-dotnet publish --framework dnxcore50 --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Resgen"
+dotnet compile --runtime %RID% --output "%STAGE2_DIR%" "%REPOROOT%\src\Microsoft.DotNet.Tools.Resgen"
 if errorlevel 1 goto fail
 
 echo Bootstrapped dotnet to %STAGE2_DIR%

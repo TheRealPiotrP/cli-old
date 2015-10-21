@@ -26,6 +26,7 @@ namespace Microsoft.DotNet.Tools.Compiler
 
             var output = app.Option("-o|--output <OUTPUT_DIR>", "Directory in which to place outputs", CommandOptionType.SingleValue);
             var framework = app.Option("-f|--framework <FRAMEWORK>", "Compile a specific framework", CommandOptionType.MultipleValue);
+            var runtime = app.Option("-r|--runtime <RUNTIME_IDENTIFIER>", "Target runtime to publish for", CommandOptionType.SingleValue);
             var configuration = app.Option("-c|--configuration <CONFIGURATION>", "Configuration under which to build", CommandOptionType.SingleValue);
             var noProjectDependencies = app.Option("--no-project-dependencies", "Skips building project references.", CommandOptionType.NoValue);
             var project = app.Argument("<PROJECT>", "The project to compile, defaults to the current directory. Can be a path to a project.json or a project directory");
@@ -40,6 +41,7 @@ namespace Microsoft.DotNet.Tools.Compiler
                 }
 
                 var buildProjectReferences = !noProjectDependencies.HasValue();
+                var runtimeId = runtime.Value() ?? InferRid();
 
                 // Load project contexts for each framework and compile them
                 bool success = true;
@@ -47,14 +49,14 @@ namespace Microsoft.DotNet.Tools.Compiler
                 {
                     foreach (var context in framework.Values.Select(f => ProjectContext.Create(path, NuGetFramework.Parse(f))))
                     {
-                        success &= Compile(context, configuration.Value() ?? Constants.DefaultConfiguration, output.Value(), buildProjectReferences);
+                        success &= Compile(context, runtimeId, configuration.Value() ?? Constants.DefaultConfiguration, output.Value(), buildProjectReferences);
                     }
                 }
                 else
                 {
                     foreach (var context in ProjectContext.CreateContextForEachFramework(path))
                     {
-                        success &= Compile(context, configuration.Value() ?? Constants.DefaultConfiguration, output.Value(), buildProjectReferences);
+                        success &= Compile(context, runtimeId, configuration.Value() ?? Constants.DefaultConfiguration, output.Value(), buildProjectReferences);
                     }
                 }
                 return success ? 0 : 1;
@@ -75,7 +77,25 @@ namespace Microsoft.DotNet.Tools.Compiler
             }
         }
 
-        private static bool Compile(ProjectContext context, string configuration, string outputPath, bool buildProjectReferences)
+        private static string InferRid()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return "win7-x64";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return "osx.10.10-x64";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return "ubuntu.14.04-x64";
+            }
+
+            return null;
+        }
+
+        private static bool Compile(ProjectContext context, string runtimeId, string configuration, string outputPath, bool buildProjectReferences)
         {
             Reporter.Output.WriteLine($"Building {context.RootProject.Identity.Name.Yellow()} for {context.TargetFramework.DotNetFrameworkName.Yellow()}");
 
@@ -220,8 +240,27 @@ namespace Microsoft.DotNet.Tools.Compiler
 
             if (result.ExitCode == 0)
             {
-                Reporter.Output.WriteLine($"Compiled {context.ProjectFile.Name} successfully!".Green().Bold());
-                return true;
+                // Not compiling an executable so don't publish dependencies
+                if (!compilationOptions.EmitEntryPoint.GetValueOrDefault())
+                {
+                    return true;
+                }
+
+                // No rid so don't publish dependencies
+                if (string.IsNullOrEmpty(runtimeId))
+                {
+                    return true;
+                }
+
+                var runtimeContext = ProjectContext.Create(context.ProjectDirectory, context.TargetFramework, new[] { runtimeId });
+
+                if (string.IsNullOrEmpty(runtimeContext.RuntimeIdentifier))
+                {
+                    Reporter.Error.WriteLine($"Unable to resolve runtime identifier {runtimeId}".Red().Bold());
+                    return false;
+                }
+
+                return Publisher.Publish(runtimeContext, outputPath, configuration);
             }
 
             return false;

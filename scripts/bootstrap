@@ -82,13 +82,13 @@ export PATH=$STAGE1_DIR:$PATH
 rm $STAGE0_DIR/csc
 
 echo "Building stage2 dotnet using stage1 ..."
-dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Cli"
+dotnet compile --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Cli"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler"
+dotnet compile --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler.Csc"
+dotnet compile --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler.Csc"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Publish"
+dotnet compile --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Publish"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
-dotnet publish --framework dnxcore50 --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Resgen"
+dotnet compile --runtime $RID --output "$STAGE2_DIR" "$REPOROOT/src/Microsoft.DotNet.Tools.Resgen"
 rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
