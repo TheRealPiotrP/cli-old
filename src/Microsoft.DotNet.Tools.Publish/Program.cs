@@ -203,11 +203,7 @@ exec ""$DIR/corerun"" ""$DIR/{context.ProjectFile.Name}.exe"" $*
         private static void CopyCoreCLR(string outputPath)
         {
             // TEMPORARILY bring checked-in CoreCLR stuff along for the ride.
-            string clrPath = Environment.GetEnvironmentVariable(Constants.ClrPathEnvironmentVariable);
-            if(string.IsNullOrEmpty(clrPath))
-            {
-                clrPath = AppContext.BaseDirectory;
-            }
+            var clrPath = AppContext.BaseDirectory;
 
             foreach(var file in CoreCLRFileNames)
             {

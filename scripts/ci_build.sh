@@ -11,6 +11,13 @@ if [ -z "$HOME" ]; then
     mkdir -p $HOME
 fi
 
+# Set the build number using CI build number
+BASE_VERSION=0.0.2-alpha1
+if [ ! -z "$BUILD_NUMBER" ]; then
+    export DOTNET_BUILD_VERSION="$BASE_VERSION-$(printf "%05d" $BUILD_NUMBER)"
+    echo "Building version $DOTNET_BUILD_VERSION"
+fi
+
 if [[ "$(uname)" == "Linux" ]]; then
     $SCRIPT_DIR/dockerbuild.sh debian $@
 else
