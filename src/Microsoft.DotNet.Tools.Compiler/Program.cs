@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Tools.Compiler
         public static int Main(string[] args)
         {
             DebugHelper.HandleDebugSwitch(ref args);
-herp derp how do i code
+
             var app = new CommandLineApplication();
             app.Name = "dotnet compile";
             app.FullName = ".NET Compiler";
@@ -84,8 +84,6 @@ herp derp how do i code
 
             var diagnostics = new List<DiagnosticMessage>();
 
-            bool success = true;
-
             // Collect dependency diagnostics
             diagnostics.AddRange(context.LibraryManager.GetAllDiagnostics());
 
@@ -145,15 +143,18 @@ herp derp how do i code
                     configuration,
                     context.TargetFramework.GetTwoDigitShortFolderName());
 
-            if (!Directory.Exists(outputPath))
+            if (Directory.Exists(outputPath))
             {
-                Directory.CreateDirectory(outputPath);
+                Directory.Delete(outputPath, recursive: true);
             }
 
-            if (!Directory.Exists(intermediateOutputPath))
+            if (Directory.Exists(intermediateOutputPath))
             {
-                Directory.CreateDirectory(intermediateOutputPath);
+                Directory.Delete(intermediateOutputPath, recursive: true);
             }
+
+            Directory.CreateDirectory(outputPath);
+            Directory.CreateDirectory(intermediateOutputPath);
 
             // Get compilation options
             var compilationOptions = context.ProjectFile.GetCompilerOptions(context.TargetFramework, configuration);
@@ -197,47 +198,40 @@ herp derp how do i code
             File.WriteAllLines(rsp, compilerArgs);
 
             var result = Command.Create($"dotnet-compile-{compiler}", $"\"{rsp}\"")
-                                 .OnErrorLine(line =>
-                                 {
-                                     var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
-                                     if (diagnostic != null)
-                                     {
-                                         diagnostics.Add(diagnostic);
-                                     }
-                                     else
-                                     {
-                                         Console.Error.WriteLine(line);
-                                     }
-                                 })
-                                 .OnOutputLine(line =>
-                                 {
-                                     var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
+                                 .ForwardStdErr()
+                                 .ForwardStdOut()
+                                 //.OnErrorLine(line =>
+                                 //{
+                                     //var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
+                                     //if (diagnostic != null)
+                                     //{
+                                         //diagnostics.Add(diagnostic);
+                                     //}
+                                 //})
+                                 //.OnOutputLine(line =>
+                                 //{
+                                     //var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
 
-                                     if (diagnostic != null)
-                                     {
-                                         diagnostics.Add(diagnostic);
-                                     }
-                                     else
-                                     {
-                                         Console.Out.WriteLine(line);
-                                     }
-                                 })
+                                     //if (diagnostic != null)
+                                     //{
+                                         //diagnostics.Add(diagnostic);
+                                     //}
+                                 //})
                                  .Execute();
 
             foreach (var diag in diagnostics)
             {
-                success &= diag.Severity != DiagnosticMessageSeverity.Error;
                 PrintDiagnostic(diag);
             }
-            
-            success &= result.ExitCode == 0;
 
-            PrintSummary(diagnostics);
+            var success = result.ExitCode == 0;
+
+            PrintSummary(success, diagnostics);
 
             return success;
         }
 
-        private static void PrintSummary(List<DiagnosticMessage> diagnostics)
+        private static void PrintSummary(bool success, List<DiagnosticMessage> diagnostics)
         {
             Reporter.Output.Writer.WriteLine();
 

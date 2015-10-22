@@ -51,8 +51,6 @@ $DIR/install-stage0.sh $STAGE0_DIR $DIR/dnvm2.sh
 
 export PATH=$STAGE0_DIR/bin:$PATH
 
-export DOTNET_CLR_HOSTS_PATH=$REPOROOT/ext/CLRHost/$RID
-
 if ! type dnx > /dev/null 2>&1; then
     echo "Installing and use-ing the latest CoreCLR x64 DNX ..."
     mkdir -p $DNX_DIR
@@ -83,12 +81,18 @@ dnu restore "$REPOROOT" --runtime osx.10.10-x64 --runtime ubuntu.14.04-x64 --run
 # Clean up stage1
 [ -d "$STAGE1_DIR" ] && rm -Rf "$STAGE1_DIR"
 
+# To build stage 1, we need to use the local checked-in copy of CoreCLR
+export DOTNET_CLR_PATH=$REPOROOT/ext/CoreCLR/$RID
+
 echo "Building basic dotnet tools using Stage 0"
 dotnet publish --framework "$TFM" --runtime $RID --output "$STAGE1_DIR" --configuration "$CONFIGURATION" "$REPOROOT/src/Microsoft.DotNet.Cli"
 dotnet publish --framework "$TFM" --runtime $RID --output "$STAGE1_DIR" --configuration "$CONFIGURATION" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler"
 dotnet publish --framework "$TFM" --runtime $RID --output "$STAGE1_DIR" --configuration "$CONFIGURATION" "$REPOROOT/src/Microsoft.DotNet.Tools.Compiler.Csc"
 dotnet publish --framework "$TFM" --runtime $RID --output "$STAGE1_DIR" --configuration "$CONFIGURATION" "$REPOROOT/src/Microsoft.DotNet.Tools.Publish"
 dotnet publish --framework "$TFM" --runtime $RID --output "$STAGE1_DIR" --configuration "$CONFIGURATION" "$REPOROOT/src/Microsoft.DotNet.Tools.Resgen"
+
+# Clear the CLR Path, stage2's build will use stage1's CLR
+unset DOTNET_CLR_PATH
 
 # Add stage1 to the path and use it to build stage2
 export PATH=$STAGE1_DIR:$START_PATH
