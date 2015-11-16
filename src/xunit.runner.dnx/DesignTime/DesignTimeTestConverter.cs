@@ -11,7 +11,7 @@ namespace Xunit.Runner.Dnx
     public static class DesignTimeTestConverter
     {
 #if DNXCORE50
-        private readonly static HashAlgorithm _hash = SHA1.Create();
+        private readonly static HashAlgorithm Hash = SHA1.Create();
 #else
         private readonly static HashAlgorithm _hash = new SHA1Managed();
 #endif
@@ -103,7 +103,7 @@ namespace Xunit.Runner.Dnx
 
         private static Guid GuidFromString(string data)
         {
-            var hash = _hash.ComputeHash(Encoding.Unicode.GetBytes(data));
+            var hash = Hash.ComputeHash(Encoding.Unicode.GetBytes(data));
             var b = new byte[16];
             Array.Copy((Array)hash, (Array)b, 16);
             return new Guid(b);

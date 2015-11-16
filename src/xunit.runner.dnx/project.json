@@ -28,6 +28,10 @@
       "version": "1.0.0",
       "type": "build"
     },
+    "Microsoft.DotNet.ProjectModel": {
+      "version": "1.0.0",
+      "type": "build"
+    },
     "Microsoft.Extensions.PlatformAbstractions": "1.0.0-*",
     "xunit.runner.utility": "2.1.0",
     "xunit.runner.reporters": "2.1.0"

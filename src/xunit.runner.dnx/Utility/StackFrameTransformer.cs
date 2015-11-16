@@ -10,11 +10,11 @@ namespace Xunit.Runner.Dnx
     /// </summary>
     public static class StackFrameTransformer
     {
-        static Regex regex;
+        static Regex _regex;
 
         static StackFrameTransformer()
         {
-            regex = new Regex(@"^\s*at (?<method>.*) in (?<file>.*):(line )?(?<line>\d+)$");
+            _regex = new Regex(@"^\s*at (?<method>.*) in (?<file>.*):(line )?(?<line>\d+)$");
         }
 
         /// <summary/>
@@ -23,7 +23,7 @@ namespace Xunit.Runner.Dnx
             if (stackFrame == null)
                 return null;
 
-            var match = regex.Match(stackFrame);
+            var match = _regex.Match(stackFrame);
             if (match == Match.Empty)
                 return stackFrame;
 

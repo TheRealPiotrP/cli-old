@@ -5,30 +5,30 @@ namespace Xunit.Runner.Dnx
 {
     public class DiagnosticMessageVisitor : TestMessageVisitor
     {
-        readonly string assemblyDisplayName;
-        readonly object consoleLock;
-        readonly bool noColor;
-        readonly bool showDiagnostics;
+        readonly string _assemblyDisplayName;
+        readonly object _consoleLock;
+        readonly bool _noColor;
+        readonly bool _showDiagnostics;
 
         public DiagnosticMessageVisitor(object consoleLock, string assemblyDisplayName, bool showDiagnostics, bool noColor)
         {
-            this.noColor = noColor;
-            this.consoleLock = consoleLock;
-            this.assemblyDisplayName = assemblyDisplayName;
-            this.showDiagnostics = showDiagnostics;
+            this._noColor = noColor;
+            this._consoleLock = consoleLock;
+            this._assemblyDisplayName = assemblyDisplayName;
+            this._showDiagnostics = showDiagnostics;
         }
 
         protected override bool Visit(IDiagnosticMessage diagnosticMessage)
         {
-            if (showDiagnostics)
-                lock (consoleLock)
+            if (_showDiagnostics)
+                lock (_consoleLock)
                 {
-                    if (!noColor)
+                    if (!_noColor)
                         Console.ForegroundColor = ConsoleColor.Yellow;
 
-                    Console.WriteLine("   {0}: {1}", assemblyDisplayName, diagnosticMessage.Message);
+                    Console.WriteLine("   {0}: {1}", _assemblyDisplayName, diagnosticMessage.Message);
 
-                    if (!noColor)
+                    if (!_noColor)
                         Console.ForegroundColor = ConsoleColor.Gray;
                 }
 

@@ -17,32 +17,32 @@ namespace Xunit.Runner.Dnx
 {
     public class Program
     {
-        readonly IApplicationEnvironment appEnv;
+        readonly IApplicationEnvironment _appEnv;
 #pragma warning disable 0649
-        volatile bool cancel;
+        volatile bool _cancel;
 #pragma warning restore 0649
-        readonly ConcurrentDictionary<string, ExecutionSummary> completionMessages = new ConcurrentDictionary<string, ExecutionSummary>();
-        bool failed;
-        readonly ILibraryManager libraryManager;
-        IRunnerLogger logger;
-        IMessageSink reporterMessageHandler;
-        readonly IServiceProvider services;
-        readonly IApplicationShutdown shutdown;
-
+        readonly ConcurrentDictionary<string, ExecutionSummary> _completionMessages = new ConcurrentDictionary<string, ExecutionSummary>();
+        bool _failed;
+        readonly ILibraryManager _libraryManager;
+        IRunnerLogger _logger;
+        IMessageSink _reporterMessageHandler;
+        readonly IServiceProvider _services;
+        readonly IApplicationShutdown _shutdown;
+        
         public Program(IServiceProvider services)
         {
             Guard.ArgumentNotNull(nameof(services), services);
 
-            this.services = services;
-            appEnv = PlatformServices.Default.Application;
-            libraryManager = PlatformServices.Default.LibraryManager;
-            shutdown = (IApplicationShutdown)services.GetService(typeof(IApplicationShutdown));
+            this._services = services;
+            _appEnv = PlatformServices.Default.Application;
+            _libraryManager = PlatformServices.Default.LibraryManager;
+            _shutdown = null;
         }
 
         [STAThread]
         public int Main(string[] args)
         {
-            args = Enumerable.Repeat(Path.Combine(appEnv.ApplicationBasePath, appEnv.ApplicationName + ".dll"), 1).Concat(args).ToArray();
+            args = Enumerable.Repeat(Path.Combine(_appEnv.ApplicationBasePath, _appEnv.ApplicationName + ".dll"), 1).Concat(args).ToArray();
 
             try
             {
@@ -55,8 +55,8 @@ namespace Xunit.Runner.Dnx
                     return 1;
                 }
 
-                if (shutdown != null)
-                    shutdown.ShutdownRequested.Register(() =>
+                if (_shutdown != null)
+                    _shutdown.ShutdownRequested.Register(() =>
                     {
                         Console.WriteLine("Execution was cancelled, exiting.");
 #if DNXCORE50
@@ -96,8 +96,8 @@ namespace Xunit.Runner.Dnx
                 }
 #endif
 
-                logger = new ConsoleRunnerLogger(!commandLine.NoColor);
-                reporterMessageHandler = commandLine.Reporter.CreateMessageHandler(logger);
+                _logger = new ConsoleRunnerLogger(!commandLine.NoColor);
+                _reporterMessageHandler = commandLine.Reporter.CreateMessageHandler(_logger);
 
                 if (!commandLine.NoLogo)
                     PrintHeader();
@@ -152,7 +152,7 @@ namespace Xunit.Runner.Dnx
         {
             var result = new List<IRunnerReporter>();
 
-            foreach (var library in libraryManager.GetReferencingLibraries("xunit.runner.utility"))
+            foreach (var library in _libraryManager.GetReferencingLibraries("xunit.runner.utility"))
                 foreach (var assembly in library.Assemblies)
                 {
                     TypeInfo[] types;
@@ -189,7 +189,7 @@ namespace Xunit.Runner.Dnx
 
         void PrintHeader()
         {
-            var framework = appEnv.RuntimeFramework;
+            var framework = _appEnv.RuntimeFramework;
             Console.WriteLine("xUnit.net DNX Runner ({0}-bit {1} {2})", IntPtr.Size * 8, framework.Identifier, framework.Version);
         }
 
@@ -296,8 +296,8 @@ namespace Xunit.Runner.Dnx
 
                 clockTime.Stop();
 
-                if (completionMessages.Count > 0)
-                    reporterMessageHandler.OnMessage(new TestExecutionSummary(clockTime.Elapsed, completionMessages.OrderBy(kvp => kvp.Key).ToList()));
+                if (_completionMessages.Count > 0)
+                    _reporterMessageHandler.OnMessage(new TestExecutionSummary(clockTime.Elapsed, _completionMessages.OrderBy(kvp => kvp.Key).ToList()));
             }
 
             Directory.SetCurrentDirectory(originalWorkingFolder);
@@ -305,7 +305,7 @@ namespace Xunit.Runner.Dnx
             foreach (var transformer in xmlTransformers)
                 transformer(assembliesElement);
 
-            return failed ? 1 : completionMessages.Values.Sum(summary => summary.Failed);
+            return _failed ? 1 : _completionMessages.Values.Sum(summary => summary.Failed);
         }
 
         XElement ExecuteAssembly(object consoleLock,
@@ -320,7 +320,7 @@ namespace Xunit.Runner.Dnx
                                  bool listTestCases,
                                  IReadOnlyList<string> designTimeFullyQualifiedNames)
         {
-            if (cancel)
+            if (_cancel)
                 return null;
 
             var assemblyElement = needsXml ? new XElement("assembly") : null;
@@ -343,7 +343,7 @@ namespace Xunit.Runner.Dnx
 
                 var assemblyDisplayName = Path.GetFileNameWithoutExtension(assembly.AssemblyFilename);
                 var diagnosticMessageVisitor = new DiagnosticMessageVisitor(consoleLock, assemblyDisplayName, assembly.Configuration.DiagnosticMessagesOrDefault, noColor);
-                var sourceInformationProvider = new SourceInformationProviderAdapater(services);
+                var sourceInformationProvider = new SourceInformationProviderAdapater(_services);
 
                 using (var controller = new XunitFrontController(AppDomainSupport.Denied, assembly.AssemblyFilename, assembly.ConfigFilename, false, diagnosticMessageSink: diagnosticMessageVisitor, sourceInformationProvider: sourceInformationProvider))
                 using (var discoveryVisitor = new TestDiscoveryVisitor())
@@ -351,7 +351,7 @@ namespace Xunit.Runner.Dnx
                     var includeSourceInformation = designTime && listTestCases;
 
                     // Discover & filter the tests
-                    reporterMessageHandler.OnMessage(new TestAssemblyDiscoveryStarting(assembly, false, false, discoveryOptions));
+                    _reporterMessageHandler.OnMessage(new TestAssemblyDiscoveryStarting(assembly, false, false, discoveryOptions));
 
                     controller.Find(includeSourceInformation: includeSourceInformation, messageSink: discoveryVisitor, discoveryOptions: discoveryOptions);
                     discoveryVisitor.Finished.WaitOne();
@@ -366,7 +366,7 @@ namespace Xunit.Runner.Dnx
                         {
                             if (designTime)
                             {
-                                var sink = (ITestDiscoverySink)services.GetService(typeof(ITestDiscoverySink));
+                                var sink = (ITestDiscoverySink)_services.GetService(typeof(ITestDiscoverySink));
 
                                 foreach (var testcase in vsTestCases.Values)
                                 {
@@ -390,11 +390,11 @@ namespace Xunit.Runner.Dnx
 
                     if (designTime)
                     {
-                        var sink = (ITestExecutionSink)services.GetService(typeof(ITestExecutionSink));
-                        resultsVisitor = new DesignTimeExecutionVisitor(sink, vsTestCases, reporterMessageHandler);
+                        var sink = (ITestExecutionSink)_services.GetService(typeof(ITestExecutionSink));
+                        resultsVisitor = new DesignTimeExecutionVisitor(sink, vsTestCases, _reporterMessageHandler);
                     }
                     else
-                        resultsVisitor = new XmlAggregateVisitor(reporterMessageHandler, completionMessages, assemblyElement, () => cancel);
+                        resultsVisitor = new XmlAggregateVisitor(_reporterMessageHandler, _completionMessages, assemblyElement, () => _cancel);
 
                     IList<ITestCase> filteredTestCases;
                     var testCasesDiscovered = discoveryVisitor.TestCases.Count;
@@ -404,24 +404,24 @@ namespace Xunit.Runner.Dnx
                         filteredTestCases = vsTestCases.Where(t => designTimeFullyQualifiedNames.Contains(t.Value.FullyQualifiedName)).Select(t => t.Key).ToList();
                     var testCasesToRun = filteredTestCases.Count;
 
-                    reporterMessageHandler.OnMessage(new TestAssemblyDiscoveryFinished(assembly, discoveryOptions, testCasesDiscovered, testCasesToRun));
+                    _reporterMessageHandler.OnMessage(new TestAssemblyDiscoveryFinished(assembly, discoveryOptions, testCasesDiscovered, testCasesToRun));
 
                     if (filteredTestCases.Count == 0)
-                        completionMessages.TryAdd(Path.GetFileName(assembly.AssemblyFilename), new ExecutionSummary());
+                        _completionMessages.TryAdd(Path.GetFileName(assembly.AssemblyFilename), new ExecutionSummary());
                     else
                     {
-                        reporterMessageHandler.OnMessage(new TestAssemblyExecutionStarting(assembly, executionOptions));
+                        _reporterMessageHandler.OnMessage(new TestAssemblyExecutionStarting(assembly, executionOptions));
 
                         controller.RunTests(filteredTestCases, resultsVisitor, executionOptions);
                         resultsVisitor.Finished.WaitOne();
 
-                        reporterMessageHandler.OnMessage(new TestAssemblyExecutionFinished(assembly, executionOptions, resultsVisitor.ExecutionSummary));
+                        _reporterMessageHandler.OnMessage(new TestAssemblyExecutionFinished(assembly, executionOptions, resultsVisitor.ExecutionSummary));
                     }
                 }
             }
             catch (Exception ex)
             {
-                failed = true;
+                _failed = true;
 
                 var e = ex;
                 while (e != null)

@@ -6,25 +6,25 @@ namespace Xunit.Runner.Dnx
 {
     public class SourceInformationProviderAdapater : ISourceInformationProvider
     {
-        private readonly TestHostSourceInformationProvider provider;
+        private readonly TestHostSourceInformationProvider _provider;
 
         public SourceInformationProviderAdapater(IServiceProvider services)
         {
-            provider = (TestHostSourceInformationProvider)services.GetService(typeof(TestHostSourceInformationProvider));
+            _provider = (TestHostSourceInformationProvider)services.GetService(typeof(TestHostSourceInformationProvider));
         }
 
         public void Dispose() { }
 
         public ISourceInformation GetSourceInformation(ITestCase testCase)
         {
-            if (provider == null)
+            if (_provider == null)
                 return null;
 
             var reflectionMethodInfo = testCase.TestMethod.Method as IReflectionMethodInfo;
             if (reflectionMethodInfo == null)
                 return null;
 
-            var innerInformation = provider.GetSourceInformation(reflectionMethodInfo.MethodInfo);
+            var innerInformation = _provider.GetSourceInformation(reflectionMethodInfo.MethodInfo);
             if (innerInformation == null)
                 return null;
 
