@@ -48,7 +48,7 @@
         "System.Dynamic.Runtime": "4.0.11-beta-*",
         "System.Net.Primitives": "4.0.11-beta-*",
         "System.Net.Sockets": "4.1.0-beta-*",
-        "System.Runtime": "4.0.21-beta-*",
+        "System.Runtime": "4.0.21-rc2-*",
         "System.Reflection.Extensions": "4.0.1-beta-*",
         "System.Reflection.TypeExtensions": "4.0.1-beta-*",
         "System.Threading.Thread": "4.0.0-beta-*"

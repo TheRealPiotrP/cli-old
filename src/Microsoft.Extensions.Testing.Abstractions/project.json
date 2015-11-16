@@ -15,11 +15,11 @@
     "net451": {},
     "dnxcore50": {
       "dependencies": {
-        "System.Collections": "4.0.11-beta-*",
+        "System.Collections": "4.0.11-rc2-*",
         "System.Reflection": "4.1.0-beta-*",
         "System.Resources.ResourceManager": "4.0.1-beta-*",
-        "System.Runtime": "4.0.21-beta-*",
-        "System.Runtime.Extensions": "4.0.11-beta-*"
+        "System.Runtime": "4.0.21-rc2-*",
+        "System.Runtime.Extensions": "4.0.11-rc2-*"
       }
     }
   }
