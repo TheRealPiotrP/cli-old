@@ -19,7 +19,6 @@ namespace Xunit.Runner.Dnx
 {
     public class Program
     {
-        readonly IApplicationEnvironment _appEnv;
 #pragma warning disable 0649
         volatile bool _cancel;
 #pragma warning restore 0649
@@ -29,7 +28,6 @@ namespace Xunit.Runner.Dnx
         IRunnerLogger _logger;
         IMessageSink _reporterMessageHandler;
         readonly IServiceProvider _services;
-        readonly IApplicationShutdown _shutdown;
         
         public static void Main(string[] args)
         {
@@ -53,14 +51,12 @@ namespace Xunit.Runner.Dnx
 
             _libraryManager = projectContext.LibraryManager;
             _services = services;
-            _appEnv = PlatformServices.Default.Application;
-            _shutdown = null;
         }
 
         [STAThread]
         public int Start(string[] args)
         {
-            args = Enumerable.Repeat(Path.Combine(_appEnv.ApplicationBasePath, _appEnv.ApplicationName + ".dll"), 1).Concat(args).ToArray();
+            args = Enumerable.Repeat(Path.Combine(AppContext.BaseDirectory, "xunit.runner.dnx.exe"), 1).Concat(args).ToArray();
 
             try
             {
@@ -73,46 +69,17 @@ namespace Xunit.Runner.Dnx
                     return 1;
                 }
 
-                if (_shutdown != null)
-                    _shutdown.ShutdownRequested.Register(() =>
-                    {
-                        Console.WriteLine("Execution was cancelled, exiting.");
-#if DNXCORE50
-                        Environment.FailFast(null);
-#else
-                        Environment.Exit(1);
-#endif
-                    });
-
-#if !DNXCORE50
-                AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-                Console.CancelKeyPress += (sender, e) =>
-                {
-                    if (!cancel)
-                    {
-                        Console.WriteLine("Canceling... (Press Ctrl+C again to terminate)");
-                        cancel = true;
-                        e.Cancel = true;
-                    }
-                };
-#endif
-
                 var defaultDirectory = Directory.GetCurrentDirectory();
                 if (!defaultDirectory.EndsWith(new String(new[] { Path.DirectorySeparatorChar })))
                     defaultDirectory += Path.DirectorySeparatorChar;
 
                 var commandLine = CommandLine.Parse(reporters, args);
 
-#if !DNXCORE50
-                if (commandLine.Debug)
-                    Debugger.Launch();
-#else
                 if (commandLine.Debug)
                 {
-                    Console.WriteLine("Debug support is not available in DNX Core.");
+                    Console.WriteLine("Debug support is not available.");
                     return -1;
                 }
-#endif
 
                 _logger = new ConsoleRunnerLogger(!commandLine.NoColor);
                 _reporterMessageHandler = commandLine.Reporter.CreateMessageHandler(_logger);
@@ -152,30 +119,16 @@ namespace Xunit.Runner.Dnx
             }
         }
 
-#if !DNXCORE50
-        static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            var ex = e.ExceptionObject as Exception;
-
-            if (ex != null)
-                Console.WriteLine(ex.ToString());
-            else
-                Console.WriteLine("Error of unknown type thrown in application domain");
-
-            Environment.Exit(1);
-        }
-#endif
-
         List<IRunnerReporter> GetAvailableRunnerReporters()
         {
             var result = new List<IRunnerReporter>();
 
             foreach (var library in _libraryManager.GetLibraries().Where(l => l.Dependencies.Any(d => d.Name == "xunit.runner.utility")))
             {
-                var assemblyName = new AssemblyName()
+                var assemblyName = new AssemblyName
                 {
                     Name = library.Identity.Name,
-                    Version = new System.Version(library.Identity.Version.Major, library.Identity.Version.Minor, library.Identity.Version.Patch, library.Identity.Version.Revision)
+                    Version = new Version(library.Identity.Version.Major, library.Identity.Version.Minor, library.Identity.Version.Patch, library.Identity.Version.Revision)
                 };
                     
                 TypeInfo[] types;
@@ -216,8 +169,7 @@ namespace Xunit.Runner.Dnx
 
         void PrintHeader()
         {
-            var framework = _appEnv.RuntimeFramework;
-            Console.WriteLine("xUnit.net DNX Runner ({0}-bit {1} {2})", IntPtr.Size * 8, framework.Identifier, framework.Version);
+            Console.WriteLine("xUnit.net DNX Runner ({0}-bit {1})", IntPtr.Size * 8, RuntimeIdentifier.Current);
         }
 
         static void PrintUsage(IReadOnlyList<IRunnerReporter> reporters)
@@ -240,9 +192,6 @@ namespace Xunit.Runner.Dnx
             Console.WriteLine("                         :   (number)  - limit task thread pool size to 'count'");
             Console.WriteLine("  -wait                  : wait for input after completion");
             Console.WriteLine("  -diagnostics           : enable diagnostics messages for all test assemblies");
-#if !DNXCORE50
-            Console.WriteLine("  -debug                 : launch the debugger to debug the tests");
-#endif
             Console.WriteLine("  -trait \"name=value\"    : only run tests with matching name/value traits");
             Console.WriteLine("                         : if specified more than once, acts as an OR operation");
             Console.WriteLine("  -notrait \"name=value\"  : do not run tests with matching name/value traits");
