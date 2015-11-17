@@ -29,6 +29,11 @@ namespace Xunit.Runner.Dnx
         readonly IServiceProvider _services;
         readonly IApplicationShutdown _shutdown;
         
+        public static void Main(string[] args)
+        {
+            program.Start(args);
+        }
+
         public Program(IServiceProvider services)
         {
             Guard.ArgumentNotNull(nameof(services), services);
@@ -40,7 +45,7 @@ namespace Xunit.Runner.Dnx
         }
 
         [STAThread]
-        public int Main(string[] args)
+        public int Start(string[] args)
         {
             args = Enumerable.Repeat(Path.Combine(_appEnv.ApplicationBasePath, _appEnv.ApplicationName + ".dll"), 1).Concat(args).ToArray();
 
