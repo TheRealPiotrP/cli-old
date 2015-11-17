@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Testing.Abstractions;
 using Microsoft.Extensions.PlatformAbstractions;
+using Microsoft.Extensions.ProjectModel;
+using Microsoft.Extensions.ProjectModel.Resolution;
 using Xunit.Abstractions;
 using VsTestCase = Microsoft.Extensions.Testing.Abstractions.Test;
 
@@ -23,7 +25,7 @@ namespace Xunit.Runner.Dnx
 #pragma warning restore 0649
         readonly ConcurrentDictionary<string, ExecutionSummary> _completionMessages = new ConcurrentDictionary<string, ExecutionSummary>();
         bool _failed;
-        readonly ILibraryManager _libraryManager;
+        readonly LibraryManager _libraryManager;
         IRunnerLogger _logger;
         IMessageSink _reporterMessageHandler;
         readonly IServiceProvider _services;
@@ -31,6 +33,10 @@ namespace Xunit.Runner.Dnx
         
         public static void Main(string[] args)
         {
+            var serviceProvider = new DummyServiceProvider();
+
+            var program = new Program(serviceProvider);
+
             program.Start(args);
         }
 
@@ -38,9 +44,16 @@ namespace Xunit.Runner.Dnx
         {
             Guard.ArgumentNotNull(nameof(services), services);
 
+            var path = Directory.GetCurrentDirectory();
+
+            var projectContexts = ProjectContext.CreateContextForEachFramework(path);
+
+
+            var projectContext = projectContexts.First();
+
+            _libraryManager = projectContext.LibraryManager;
             _services = services;
             _appEnv = PlatformServices.Default.Application;
-            _libraryManager = PlatformServices.Default.LibraryManager;
             _shutdown = null;
         }
 
@@ -157,37 +170,46 @@ namespace Xunit.Runner.Dnx
         {
             var result = new List<IRunnerReporter>();
 
-            foreach (var library in _libraryManager.GetReferencingLibraries("xunit.runner.utility"))
-                foreach (var assembly in library.Assemblies)
+            foreach (var library in _libraryManager.GetLibraries().Where(l => l.Dependencies.Any(d => d.Name == "xunit.runner.utility")))
+            {
+                var assemblyName = new AssemblyName()
                 {
-                    TypeInfo[] types;
+                    Name = library.Identity.Name,
+                    Version = new System.Version(library.Identity.Version.Major, library.Identity.Version.Minor, library.Identity.Version.Patch, library.Identity.Version.Revision)
+                };
+                    
+                TypeInfo[] types;
 
-                    try
+                try
+                {
+                    var assm = Assembly.Load(assemblyName);
+                    types = assm.DefinedTypes.ToArray();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                var defaultRunnerReporterType = typeof(DefaultRunnerReporter).GetTypeInfo();
+
+                var runnerReportersTypes = types
+                    .Where(t => t != null)
+                    .Where(t => !t.IsAbstract)
+                    .Where(t => t != defaultRunnerReporterType)
+                    .Where(t => t.ImplementedInterfaces.Any(i => i == typeof (IRunnerReporter)));
+
+                foreach (var type in runnerReportersTypes)
+                {
+                    var ctor = type.DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Length == 0);
+                    if (ctor == null)
                     {
-                        var assm = Assembly.Load(assembly);
-                        types = assm.DefinedTypes.ToArray();
-                    }
-                    catch
-                    {
+                        Console.WriteLine("Type {0} in assembly {1} appears to be a runner reporter, but does not have an empty constructor.", type.FullName, assemblyName.Name);
                         continue;
                     }
 
-                    var defaultRunnerReporterType = typeof(DefaultRunnerReporter).GetTypeInfo();
-
-                    foreach (var type in types)
-                    {
-                        if (type == null || type.IsAbstract || type == defaultRunnerReporterType || !type.ImplementedInterfaces.Any(t => t == typeof(IRunnerReporter)))
-                            continue;
-                        var ctor = type.DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Length == 0);
-                        if (ctor == null)
-                        {
-                            Console.WriteLine("Type {0} in assembly {1} appears to be a runner reporter, but does not have an empty constructor.", type.FullName, assembly.Name);
-                            continue;
-                        }
-
-                        result.Add((IRunnerReporter)ctor.Invoke(new object[0]));
-                    }
+                    result.Add((IRunnerReporter)ctor.Invoke(new object[0]));
                 }
+            }
 
             return result;
         }
