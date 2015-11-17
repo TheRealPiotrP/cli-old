@@ -12,10 +12,10 @@ namespace Xunit.Runner.Dnx
 
         public DiagnosticMessageVisitor(object consoleLock, string assemblyDisplayName, bool showDiagnostics, bool noColor)
         {
-            this._noColor = noColor;
-            this._consoleLock = consoleLock;
-            this._assemblyDisplayName = assemblyDisplayName;
-            this._showDiagnostics = showDiagnostics;
+            _noColor = noColor;
+            _consoleLock = consoleLock;
+            _assemblyDisplayName = assemblyDisplayName;
+            _showDiagnostics = showDiagnostics;
         }
 
         protected override bool Visit(IDiagnosticMessage diagnosticMessage)

@@ -17,8 +17,8 @@ namespace Xunit
                                    Func<bool> cancelThunk)
             : base(assemblyElement, cancelThunk)
         {
-            this._innerMessageSink = innerMessageSink;
-            this._completionMessages = completionMessages;
+            _innerMessageSink = innerMessageSink;
+            _completionMessages = completionMessages;
 
             ExecutionSummary = new ExecutionSummary();
         }

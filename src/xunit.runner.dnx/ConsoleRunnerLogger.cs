@@ -18,7 +18,7 @@ namespace Xunit
         /// logging messages.</param>
         public ConsoleRunnerLogger(bool useColors)
         {
-            this._useColors = useColors;
+            _useColors = useColors;
         }
 
         /// <inheritdoc/>

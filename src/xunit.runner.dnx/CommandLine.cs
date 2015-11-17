@@ -12,7 +12,7 @@ namespace Xunit.Runner.Dnx
 
         protected CommandLine(IReadOnlyList<IRunnerReporter> reporters, string[] args, Predicate<string> fileExists = null)
         {
-            this._reporters = reporters;
+            _reporters = reporters;
 
             if (fileExists == null)
                 fileExists = fileName => File.Exists(fileName);

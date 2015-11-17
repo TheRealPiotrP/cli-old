@@ -16,12 +16,12 @@ namespace Xunit
         {
             CancelThunk = cancelThunk ?? (() => false);
 
-            this._assemblyElement = assemblyElement;
+            _assemblyElement = assemblyElement;
 
-            if (this._assemblyElement != null)
+            if (_assemblyElement != null)
             {
                 _errorsElement = new XElement("errors");
-                this._assemblyElement.Add(_errorsElement);
+                _assemblyElement.Add(_errorsElement);
             }
         }
 

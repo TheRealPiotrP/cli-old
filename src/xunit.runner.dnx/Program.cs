@@ -33,7 +33,7 @@ namespace Xunit.Runner.Dnx
         {
             Guard.ArgumentNotNull(nameof(services), services);
 
-            this._services = services;
+            _services = services;
             _appEnv = PlatformServices.Default.Application;
             _libraryManager = PlatformServices.Default.LibraryManager;
             _shutdown = null;
