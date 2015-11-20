@@ -1,6 +1,7 @@
 ﻿{
   "authors": [ "James Newkirk", "Brad Wilson" ],
   "title": "xUnit.net [Runner: dotnet]",
+  "name": "dotnet-test-xunit",
   "description": "Console and Visual Studio runner for xUnit.net.\r\n\r\nSupported platforms:\r\n- dotnet 5.4+",
   "projectUrl": "https://github.com/xunit/dotnet.xunit",
   "iconUrl": "https://raw.githubusercontent.com/xunit/media/master/logo-512-transparent.png",
@@ -23,10 +24,6 @@
   },
   "dependencies": {
     "Microsoft.Extensions.Testing.Abstractions": {
-      "version": "1.0.0",
-      "type": "build"
-    },
-    "Microsoft.Extensions.TestHost": {
       "version": "1.0.0",
       "type": "build"
     },

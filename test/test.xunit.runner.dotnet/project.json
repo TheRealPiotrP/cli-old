@@ -5,7 +5,7 @@
   },
   "dependencies": {
     "xunit": "2.1.0-rc2-*",
-    "xunit.runner.dnx": {
+    "xunit.runner.dotnet": {
       "version": "",
       "type": "build"
     }
