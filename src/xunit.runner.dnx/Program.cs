@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Microsoft.DotNet.Cli.Utils;
 using Microsoft.Extensions.Testing.Abstractions;
 using Microsoft.Extensions.ProjectModel;
 using Microsoft.Extensions.ProjectModel.Resolution;
@@ -30,6 +31,8 @@ namespace Xunit.Runner.Dnx
         
         public static void Main(string[] args)
         {
+            DebugHelper.HandleDebugSwitch(ref args);
+
             var serviceProvider = new DummyServiceProvider();
 
             var program = new Program(serviceProvider);

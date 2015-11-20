@@ -33,9 +33,17 @@
       "version": "1.0.0",
       "type": "build"
     },
+    "Microsoft.DotNet.Cli.Utils": {
+      "version": "1.0.0",
+      "type": "build"
+    },
+    "Microsoft.Extensions.CommandLineUtils.Sources": {
+      "type": "build",
+      "version": "1.0.0-*"
+    },
     "Microsoft.Extensions.PlatformAbstractions": "1.0.0-*",
     "NuGet.Packaging.Core": "3.3.0-rtm-*",
-    "xunit.runner.reporters": "2.1.0-rc*"
+    "xunit.runner.reporters": "2.1.0-rc1-*"
   },
     "repository": {
         "type": "git",
