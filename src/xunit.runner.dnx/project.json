@@ -35,8 +35,7 @@
     },
     "Microsoft.Extensions.PlatformAbstractions": "1.0.0-*",
     "NuGet.Packaging.Core": "3.3.0-rtm-*",
-    "xunit.runner.utility": "2.1.0",
-    "xunit.runner.reporters": "2.1.0"
+    "xunit.runner.reporters": "2.1.0-rc*"
   },
     "repository": {
         "type": "git",

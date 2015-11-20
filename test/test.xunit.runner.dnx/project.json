@@ -1,0 +1,14 @@
+{
+  "compilationOptions": { "emitEntryPoint": true },
+  "frameworks": {
+    "dnxcore50": { }
+  },
+  "dependencies": {
+    "System.Linq.Expressions": "4.0.11-beta-*",
+    "xunit": "2.1.0-rc*",
+    "xunit.runner.dnx": {
+      "version": "1.0.0",
+      "type": "build"
+    }
+  }
+}

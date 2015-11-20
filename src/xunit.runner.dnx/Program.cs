@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Testing.Abstractions;
-using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.Extensions.ProjectModel;
 using Microsoft.Extensions.ProjectModel.Resolution;
 using Xunit.Abstractions;
@@ -44,6 +43,8 @@ namespace Xunit.Runner.Dnx
 
             var path = Directory.GetCurrentDirectory();
 
+            path = Directory.GetParent(path).Parent.Parent.Parent.FullName;
+
             var projectContexts = ProjectContext.CreateContextForEachFramework(path);
 
 
@@ -56,7 +57,7 @@ namespace Xunit.Runner.Dnx
         [STAThread]
         public int Start(string[] args)
         {
-            args = Enumerable.Repeat(Path.Combine(AppContext.BaseDirectory, "xunit.runner.dnx.exe"), 1).Concat(args).ToArray();
+            //args = Enumerable.Repeat(Path.Combine(AppContext.BaseDirectory, "xunit.runner.dnx.exe"), 1).Concat(args).ToArray();
 
             try
             {
