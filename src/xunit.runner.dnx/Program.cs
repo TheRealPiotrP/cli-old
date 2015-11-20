@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -44,17 +45,36 @@ namespace Xunit.Runner.Dnx
         {
             Guard.ArgumentNotNull(nameof(services), services);
 
-            var path = Directory.GetCurrentDirectory();
+            var path = GetProjectRootPath();
 
-            path = Directory.GetParent(path).Parent.Parent.Parent.FullName;
+            if (path != null)
+            {
+                var projectContexts = ProjectContext.CreateContextForEachFramework(path);
 
-            var projectContexts = ProjectContext.CreateContextForEachFramework(path);
+                //TODO: this needs redesign. Pick the context for this assembly or skip context & reflect.
+                var projectContext = projectContexts.First();
 
+                _libraryManager = projectContext.LibraryManager;
+            }
 
-            var projectContext = projectContexts.First();
-
-            _libraryManager = projectContext.LibraryManager;
             _services = services;
+        }
+
+        private static string GetProjectRootPath()
+        {
+            string projectRootPath = null;
+
+            var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+            while (projectRootPath == null && directory != null)
+            {
+                if (directory.GetFiles("project.json").Any())
+                    projectRootPath = directory.FullName;
+
+                directory = directory.GetFiles("global.json").Any() ? null : directory.Parent;
+            }
+
+            return projectRootPath;
         }
 
         [STAThread]
@@ -125,6 +145,9 @@ namespace Xunit.Runner.Dnx
 
         List<IRunnerReporter> GetAvailableRunnerReporters()
         {
+            if (_libraryManager == null)
+                return new List<IRunnerReporter>();
+
             var result = new List<IRunnerReporter>();
 
             foreach (var library in _libraryManager.GetLibraries().Where(l => l.Dependencies.Any(d => d.Name == "xunit.runner.utility")))
