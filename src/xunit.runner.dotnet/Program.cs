@@ -28,23 +28,22 @@ namespace Xunit.Runner.Dnx
         readonly LibraryManager _libraryManager;
         IRunnerLogger _logger;
         IMessageSink _reporterMessageHandler;
-        readonly IServiceProvider _services;
-        
+        ITestDiscoverySink _testDiscoverySink = null;
+        ITestExecutionSink _testExecutionSink = null;
+
         public static void Main(string[] args)
         {
             DebugHelper.HandleDebugSwitch(ref args);
 
             var serviceProvider = new DummyServiceProvider();
 
-            var program = new Program(serviceProvider);
+            var program = new Program();
 
             program.Start(args);
         }
 
-        public Program(IServiceProvider services)
+        public Program()
         {
-            Guard.ArgumentNotNull(nameof(services), services);
-
             var path = GetProjectRootPath();
 
             if (path != null)
@@ -56,8 +55,6 @@ namespace Xunit.Runner.Dnx
 
                 _libraryManager = projectContext.LibraryManager;
             }
-
-            _services = services;
         }
 
         private static string GetProjectRootPath()
@@ -346,7 +343,7 @@ namespace Xunit.Runner.Dnx
 
                 var assemblyDisplayName = Path.GetFileNameWithoutExtension(assembly.AssemblyFilename);
                 var diagnosticMessageVisitor = new DiagnosticMessageVisitor(consoleLock, assemblyDisplayName, assembly.Configuration.DiagnosticMessagesOrDefault, noColor);
-                var sourceInformationProvider = new SourceInformationProviderAdapater(_services);
+                var sourceInformationProvider = new SourceInformationProviderAdapater(null);
 
                 using (var controller = new XunitFrontController(AppDomainSupport.Denied, assembly.AssemblyFilename, assembly.ConfigFilename, false, diagnosticMessageSink: diagnosticMessageVisitor, sourceInformationProvider: sourceInformationProvider))
                 using (var discoveryVisitor = new TestDiscoveryVisitor())
@@ -369,12 +366,10 @@ namespace Xunit.Runner.Dnx
                         {
                             if (designTime)
                             {
-                                var sink = (ITestDiscoverySink)_services.GetService(typeof(ITestDiscoverySink));
-
                                 foreach (var testcase in vsTestCases.Values)
                                 {
-                                    if (sink != null)
-                                        sink.SendTest(testcase);
+                                    if (_testDiscoverySink != null)
+                                        _testDiscoverySink.SendTest(testcase);
 
                                     Console.WriteLine(testcase.FullyQualifiedName);
                                 }
@@ -393,8 +388,7 @@ namespace Xunit.Runner.Dnx
 
                     if (designTime)
                     {
-                        var sink = (ITestExecutionSink)_services.GetService(typeof(ITestExecutionSink));
-                        resultsVisitor = new DesignTimeExecutionVisitor(sink, vsTestCases, _reporterMessageHandler);
+                        resultsVisitor = new DesignTimeExecutionVisitor(_testExecutionSink, vsTestCases, _reporterMessageHandler);
                     }
                     else
                         resultsVisitor = new XmlAggregateVisitor(_reporterMessageHandler, _completionMessages, assemblyElement, () => _cancel);

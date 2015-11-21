@@ -1,5 +1,4 @@
-﻿using System;
-using Xunit.Abstractions;
+﻿using Xunit.Abstractions;
 using TestHostSourceInformationProvider = Microsoft.Extensions.Testing.Abstractions.ISourceInformationProvider;
 
 namespace Xunit.Runner.Dnx
@@ -8,9 +7,9 @@ namespace Xunit.Runner.Dnx
     {
         private readonly TestHostSourceInformationProvider _provider;
 
-        public SourceInformationProviderAdapater(IServiceProvider services)
+        public SourceInformationProviderAdapater(TestHostSourceInformationProvider provider)
         {
-            _provider = (TestHostSourceInformationProvider)services.GetService(typeof(TestHostSourceInformationProvider));
+            _provider = provider;
         }
 
         public void Dispose() { }
