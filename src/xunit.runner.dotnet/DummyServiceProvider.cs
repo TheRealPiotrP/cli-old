@@ -1,6 +1,6 @@
 using System;
 
-namespace Xunit.Runner.Dnx
+namespace Xunit.Runner.DotNet
 {
     public class DummyServiceProvider : IServiceProvider
     {

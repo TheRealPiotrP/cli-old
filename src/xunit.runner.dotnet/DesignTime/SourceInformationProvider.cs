@@ -1,7 +1,7 @@
 ﻿using Xunit.Abstractions;
 using TestHostSourceInformationProvider = Microsoft.Extensions.Testing.Abstractions.ISourceInformationProvider;
 
-namespace Xunit.Runner.Dnx
+namespace Xunit.Runner.DotNet
 {
     public class SourceInformationProviderAdapater : ISourceInformationProvider
     {

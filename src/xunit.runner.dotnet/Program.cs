@@ -16,7 +16,7 @@ using Microsoft.Extensions.ProjectModel.Resolution;
 using Xunit.Abstractions;
 using VsTestCase = Microsoft.Extensions.Testing.Abstractions.Test;
 
-namespace Xunit.Runner.Dnx
+namespace Xunit.Runner.DotNet
 {
     public class Program
     {

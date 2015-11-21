@@ -1,4 +1,4 @@
-﻿namespace Xunit.Runner.Dnx
+﻿namespace Xunit.Runner.DotNet
 {
     public enum ParallelismOption
     {

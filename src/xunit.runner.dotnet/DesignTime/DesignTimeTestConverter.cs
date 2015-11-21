@@ -6,7 +6,7 @@ using System.Text;
 using Xunit.Abstractions;
 using VsTestCase = Microsoft.Extensions.Testing.Abstractions.Test;
 
-namespace Xunit.Runner.Dnx
+namespace Xunit.Runner.DotNet
 {
     public static class DesignTimeTestConverter
     {
