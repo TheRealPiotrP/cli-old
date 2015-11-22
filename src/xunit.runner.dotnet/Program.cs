@@ -35,8 +35,6 @@ namespace Xunit.Runner.DotNet
         {
             DebugHelper.HandleDebugSwitch(ref args);
 
-            var serviceProvider = new DummyServiceProvider();
-
             var program = new Program();
 
             program.Start(args);
@@ -44,6 +42,10 @@ namespace Xunit.Runner.DotNet
 
         public Program()
         {
+            _testDiscoverySink = new StreamingTestDiscoverySink(Console.OpenStandardOutput());
+
+            _testExecutionSink = new StreamingTestExecutionSink(Console.OpenStandardOutput());
+
             var path = GetProjectRootPath();
 
             if (path != null)
@@ -368,10 +370,7 @@ namespace Xunit.Runner.DotNet
                             {
                                 foreach (var testcase in vsTestCases.Values)
                                 {
-                                    if (_testDiscoverySink != null)
-                                        _testDiscoverySink.SendTest(testcase);
-
-                                    Console.WriteLine(testcase.FullyQualifiedName);
+                                    _testDiscoverySink?.SendTest(testcase);
                                 }
                             }
                             else

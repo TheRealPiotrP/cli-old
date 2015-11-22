@@ -9,7 +9,9 @@
     "warningsAsErrors": true
   },
   "dependencies": {
-    "Microsoft.Extensions.Logging.Abstractions": "1.0.0-*"
+    "Newtonsoft.Json": "7.0.1",
+    "Microsoft.Extensions.Logging.Abstractions": "1.0.0-*",
+    "System.Runtime.Serialization.Primitives": "4.0.11-beta-*"
   },
   "frameworks": {
     "net451": {},
