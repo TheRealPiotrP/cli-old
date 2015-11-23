@@ -13,7 +13,6 @@ namespace Microsoft.Extensions.Testing.Abstractions
 
         public void RecordStart(Test test)
         {
-            _stream.Send(test);
         }
 
         public void RecordResult(TestResult testResult)

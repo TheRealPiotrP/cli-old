@@ -14,6 +14,8 @@ namespace Microsoft.DotNet.Tools.Test
 
         public string Name { get; set; }
 
+        public string TestRunner { get; set; }
+
         public IDictionary<string, string> Commands { get; }
             = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
