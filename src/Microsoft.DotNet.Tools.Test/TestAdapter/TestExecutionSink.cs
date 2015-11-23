@@ -6,7 +6,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Testing.Abstractions;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Extensions.TestHost
+namespace Microsoft.DotNet.Tools.Test
 {
     public class TestExecutionSink : ITestExecutionSink
     {
@@ -20,7 +20,7 @@ namespace Microsoft.Extensions.TestHost
             _runningTests = new ConcurrentDictionary<string, TestState>();
         }
 
-        public void RecordStart(Test test)
+        public void RecordStart(Extensions.Testing.Abstractions.Test test)
         {
             if (test == null)
             {

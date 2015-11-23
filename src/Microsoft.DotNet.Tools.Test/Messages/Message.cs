@@ -4,7 +4,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Extensions.TestHost
+namespace Microsoft.DotNet.Tools.Test
 {
     public class Message
     {

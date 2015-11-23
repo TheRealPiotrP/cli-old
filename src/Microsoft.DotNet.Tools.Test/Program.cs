@@ -10,7 +10,7 @@ using Microsoft.Dnx.Runtime.Common.CommandLine;
 using Microsoft.Extensions.PlatformAbstractions;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Extensions.TestHost
+namespace Microsoft.DotNet.Tools.Test
 {
     public class Program
     {

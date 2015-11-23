@@ -5,7 +5,7 @@ using System;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.Extensions.TestHost
+namespace Microsoft.DotNet.Tools.Test
 {
     public class TestHostLoggerProvider : ILoggerProvider
     {

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Microsoft.Extensions.TestHost
+namespace Microsoft.DotNet.Tools.Test
 {
     public class Project
     {
