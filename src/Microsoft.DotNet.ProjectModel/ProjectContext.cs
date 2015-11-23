@@ -89,6 +89,7 @@ namespace Microsoft.Extensions.ProjectModel
             {
                 projectPath = Path.Combine(projectPath, Project.FileName);
             }
+
             var project = ProjectReader.GetProject(projectPath);
 
             foreach(var framework in project.GetTargetFrameworks())

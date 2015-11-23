@@ -79,8 +79,6 @@ namespace Xunit.Runner.DotNet
         [STAThread]
         public int Start(string[] args)
         {
-            //args = Enumerable.Repeat(Path.Combine(AppContext.BaseDirectory, "xunit.runner.dnx.exe"), 1).Concat(args).ToArray();
-
             try
             {
                 var reporters = GetAvailableRunnerReporters();
