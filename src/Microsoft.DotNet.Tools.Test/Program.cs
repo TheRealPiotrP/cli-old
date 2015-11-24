@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.Tools.Test
                     }
                     else
                     {
-                        var commandArgs = new List<string> { projectContexts.First().OutputPath(Constants.DefaultConfiguration) };
+                        var commandArgs = new List<string> { projectContexts.First().AssemblyPath(Constants.DefaultConfiguration) };
                         commandArgs.AddRange(app.RemainingArguments);
 
                         Command.Create("dotnet-test-xunit", commandArgs)

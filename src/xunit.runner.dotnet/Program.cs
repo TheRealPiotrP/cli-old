@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,6 +13,7 @@ using Microsoft.Extensions.Testing.Abstractions;
 using Microsoft.Extensions.ProjectModel;
 using Microsoft.Extensions.ProjectModel.Resolution;
 using Xunit.Abstractions;
+using ISourceInformationProvider = Xunit.Abstractions.ISourceInformationProvider;
 using VsTestCase = Microsoft.Extensions.Testing.Abstractions.Test;
 
 namespace Xunit.Runner.DotNet
@@ -28,8 +28,8 @@ namespace Xunit.Runner.DotNet
         readonly LibraryManager _libraryManager;
         IRunnerLogger _logger;
         IMessageSink _reporterMessageHandler;
-        ITestDiscoverySink _testDiscoverySink = null;
-        ITestExecutionSink _testExecutionSink = null;
+        ITestDiscoverySink _testDiscoverySink;
+        ITestExecutionSink _testExecutionSink;
 
         public static void Main(string[] args)
         {
@@ -89,10 +89,6 @@ namespace Xunit.Runner.DotNet
                     PrintUsage(reporters);
                     return 1;
                 }
-
-                var defaultDirectory = Directory.GetCurrentDirectory();
-                if (!defaultDirectory.EndsWith(new String(new[] { Path.DirectorySeparatorChar })))
-                    defaultDirectory += Path.DirectorySeparatorChar;
 
                 var commandLine = CommandLine.Parse(reporters, args);
 
@@ -343,7 +339,9 @@ namespace Xunit.Runner.DotNet
 
                 var assemblyDisplayName = Path.GetFileNameWithoutExtension(assembly.AssemblyFilename);
                 var diagnosticMessageVisitor = new DiagnosticMessageVisitor(consoleLock, assemblyDisplayName, assembly.Configuration.DiagnosticMessagesOrDefault, noColor);
-                var sourceInformationProvider = new SourceInformationProviderAdapater(null);
+
+                var sourceInformationProvider = GetSourceInformationProviderAdapater(assembly);
+
 
                 using (var controller = new XunitFrontController(AppDomainSupport.Denied, assembly.AssemblyFilename, assembly.ConfigFilename, false, diagnosticMessageSink: diagnosticMessageVisitor, sourceInformationProvider: sourceInformationProvider))
                 using (var discoveryVisitor = new TestDiscoveryVisitor())
@@ -426,6 +424,17 @@ namespace Xunit.Runner.DotNet
             }
 
             return assemblyElement;
+        }
+
+        private static ISourceInformationProvider GetSourceInformationProviderAdapater(XunitProjectAssembly assembly)
+        {
+            var directoryPath = Path.GetDirectoryName(assembly.AssemblyFilename);
+            var assemblyName = Path.GetFileNameWithoutExtension(assembly.AssemblyFilename);
+            var pdbPath = Path.Combine(directoryPath, assemblyName + FileNameSuffixes.ProgramDatabase);
+
+            return File.Exists(pdbPath) 
+                ? new SourceInformationProviderAdapater(new SourceInformationProvider(pdbPath, null)) 
+                : null;
         }
 
         static Task<T> TaskRun<T>(Func<T> function)

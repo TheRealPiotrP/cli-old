@@ -10,11 +10,15 @@
   },
   "dependencies": {
     "Newtonsoft.Json": "7.0.1",
+    "Microsoft.DotNet.ProjectModel": {
+      "version": "1.0.0",
+      "type": "build"
+    },
+    "Microsoft.Extensions.Compilation.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.0.0-*",
     "System.Runtime.Serialization.Primitives": "4.0.11-beta-*"
   },
   "frameworks": {
-    "net451": {},
     "dnxcore50": {
       "dependencies": {
         "System.Collections": "4.0.11-rc2-*",
@@ -24,5 +28,11 @@
         "System.Runtime.Extensions": "4.0.11-rc2-*"
       }
     }
+  },
+  "scripts": {
+      "postcompile": [
+          "../../scripts/build/place-binary \"%compile:OutputDir%/%project:Name%.dll\"",
+          "../../scripts/build/place-binary \"%compile:OutputDir%/%project:Name%.pdb\""
+      ]
   }
 }
