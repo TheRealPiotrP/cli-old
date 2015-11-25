@@ -11,7 +11,6 @@ using System.Xml.Linq;
 using Microsoft.DotNet.Cli.Utils;
 using Microsoft.Extensions.Testing.Abstractions;
 using Microsoft.Extensions.ProjectModel;
-using Microsoft.Extensions.ProjectModel.Resolution;
 using Xunit.Abstractions;
 using ISourceInformationProvider = Xunit.Abstractions.ISourceInformationProvider;
 using VsTestCase = Microsoft.Extensions.Testing.Abstractions.Test;
@@ -25,19 +24,16 @@ namespace Xunit.Runner.DotNet
 #pragma warning restore 0649
         readonly ConcurrentDictionary<string, ExecutionSummary> _completionMessages = new ConcurrentDictionary<string, ExecutionSummary>();
         bool _failed;
-        readonly LibraryManager _libraryManager;
         IRunnerLogger _logger;
         IMessageSink _reporterMessageHandler;
         ITestDiscoverySink _testDiscoverySink;
         ITestExecutionSink _testExecutionSink;
 
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             DebugHelper.HandleDebugSwitch(ref args);
 
-            var program = new Program();
-
-            program.Start(args);
+            return new Program().Start(args);
         }
 
         public Program()
@@ -45,37 +41,8 @@ namespace Xunit.Runner.DotNet
             _testDiscoverySink = new StreamingTestDiscoverySink(Console.OpenStandardOutput());
 
             _testExecutionSink = new StreamingTestExecutionSink(Console.OpenStandardOutput());
-
-            var path = GetProjectRootPath();
-
-            if (path != null)
-            {
-                var projectContexts = ProjectContext.CreateContextForEachFramework(path);
-
-                //TODO: this needs redesign. Pick the context for this assembly or skip context & reflect.
-                var projectContext = projectContexts.First();
-
-                _libraryManager = projectContext.LibraryManager;
-            }
         }
-
-        private static string GetProjectRootPath()
-        {
-            string projectRootPath = null;
-
-            var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
-
-            while (projectRootPath == null && directory != null)
-            {
-                if (directory.GetFiles("project.json").Any())
-                    projectRootPath = directory.FullName;
-
-                directory = directory.GetFiles("global.json").Any() ? null : directory.Parent;
-            }
-
-            return projectRootPath;
-        }
-
+        
         [STAThread]
         public int Start(string[] args)
         {
@@ -136,47 +103,38 @@ namespace Xunit.Runner.DotNet
             }
         }
 
-        List<IRunnerReporter> GetAvailableRunnerReporters()
+        static List<IRunnerReporter> GetAvailableRunnerReporters()
         {
-            if (_libraryManager == null)
-                return new List<IRunnerReporter>();
-
             var result = new List<IRunnerReporter>();
+            var runnerPath = Path.GetDirectoryName(AppContext.BaseDirectory);
 
-            foreach (var library in _libraryManager.GetLibraries().Where(l => l.Dependencies.Any(d => d.Name == "xunit.runner.utility")))
+            foreach (var dllFile in Directory.GetFiles(runnerPath, "*.dll").Select(f => Path.Combine(runnerPath, f)))
             {
-                var assemblyName = new AssemblyName
-                {
-                    Name = library.Identity.Name,
-                    Version = new Version(library.Identity.Version.Major, library.Identity.Version.Minor, library.Identity.Version.Patch, library.Identity.Version.Revision)
-                };
-                    
                 TypeInfo[] types;
+
+                var dllName = Path.GetFileNameWithoutExtension(dllFile);
 
                 try
                 {
-                    var assm = Assembly.Load(assemblyName);
-                    types = assm.DefinedTypes.ToArray();
+                    var assembly = Assembly.Load(new AssemblyName(dllName));
+                    types = assembly.DefinedTypes.ToArray();
                 }
                 catch
                 {
                     continue;
                 }
 
-                var defaultRunnerReporterType = typeof(DefaultRunnerReporter).GetTypeInfo();
-
-                var runnerReportersTypes = types
-                    .Where(t => t != null)
-                    .Where(t => !t.IsAbstract)
-                    .Where(t => t != defaultRunnerReporterType)
-                    .Where(t => t.ImplementedInterfaces.Any(i => i == typeof (IRunnerReporter)));
-
-                foreach (var type in runnerReportersTypes)
+                foreach (var type in types)
                 {
+                    if (type == null || type.IsAbstract || type == typeof(DefaultRunnerReporter).GetTypeInfo() || type.ImplementedInterfaces.All(i => i != typeof (IRunnerReporter)))
+                        continue;
+
                     var ctor = type.DeclaredConstructors.FirstOrDefault(c => c.GetParameters().Length == 0);
                     if (ctor == null)
                     {
-                        Console.WriteLine("Type {0} in assembly {1} appears to be a runner reporter, but does not have an empty constructor.", type.FullName, assemblyName.Name);
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Type {type.FullName} in assembly {dllFile} appears to be a runner reporter, but does not have an empty constructor.");
+                        Console.ResetColor();
                         continue;
                     }
 
