@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.Extensions.ProjectModel;
+using Microsoft.DotNet.ProjectModel;
 using NuGet.Frameworks;
 
 namespace Microsoft.DotNet.ProjectModel.Workspaces
@@ -206,7 +206,7 @@ namespace Microsoft.DotNet.ProjectModel.Workspaces
 
         private static CSharpCompilationOptions AddSigningOptions(CSharpCompilationOptions options, CommonCompilerOptions compilerOptions, string projectDirectory)
         {
-            var useOssSigning = compilerOptions.UseOssSigning == true;
+            var useOssSigning = compilerOptions.PublicSign == true;
             var keyFile = compilerOptions.KeyFile;
 
             if (!string.IsNullOrEmpty(keyFile))

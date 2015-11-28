@@ -57,11 +57,18 @@ namespace Microsoft.DotNet.Cli.Utils
 
         private static void ResolveExecutablePath(ref string executable, ref string args)
         {
-            var fullExecutable = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, executable + Constants.ExeSuffix));
-
-            if (File.Exists(fullExecutable))
+            foreach (string suffix in Constants.RunnableSuffixes)
             {
-                executable = fullExecutable;
+                var fullExecutable = Path.GetFullPath(Path.Combine(
+                                        AppContext.BaseDirectory, executable + suffix));
+
+                if (File.Exists(fullExecutable))
+                {
+                    executable = fullExecutable;
+
+                    // In priority order we've found the best runnable extension, so break.
+                    break;
+                }
             }
 
             // On Windows, we want to avoid using "cmd" if possible (it mangles the colors, and a bunch of other things)
@@ -125,6 +132,8 @@ namespace Microsoft.DotNet.Cli.Utils
 
         public CommandResult Execute()
         {
+            Reporter.Verbose.WriteLine($"Running {_process.StartInfo.FileName} {_process.StartInfo.Arguments}");
+
             ThrowIfRunning();
             _running = true;
 
@@ -168,6 +177,12 @@ namespace Microsoft.DotNet.Cli.Utils
                 exitCode,
                 _stdOutCapture?.GetStringBuilder()?.ToString(),
                 _stdErrCapture?.GetStringBuilder()?.ToString());
+        }
+
+        public Command WorkingDirectory(string projectDirectory)
+        {
+            _process.StartInfo.WorkingDirectory = projectDirectory;
+            return this;
         }
 
         public Command EnvironmentVariable(string name, string value)

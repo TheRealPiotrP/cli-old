@@ -11,8 +11,8 @@ using Microsoft.Dnx.Runtime.Common.CommandLine;
 using Microsoft.DotNet.Cli.Utils;
 using Microsoft.DotNet.Cli.Compiler.Common;
 using Microsoft.DotNet.Tools.Common;
-using Microsoft.Extensions.ProjectModel;
-using Microsoft.Extensions.ProjectModel.Compilation;
+using Microsoft.DotNet.ProjectModel;
+using Microsoft.DotNet.ProjectModel.Compilation;
 using NuGet.Frameworks;
 
 namespace Microsoft.DotNet.Tools.Compiler
@@ -35,7 +35,13 @@ namespace Microsoft.DotNet.Tools.Compiler
             var configuration = app.Option("-c|--configuration <CONFIGURATION>", "Configuration under which to build", CommandOptionType.SingleValue);
             var noProjectDependencies = app.Option("--no-project-dependencies", "Skips building project references.", CommandOptionType.NoValue);
             var project = app.Argument("<PROJECT>", "The project to compile, defaults to the current directory. Can be a path to a project.json or a project directory");
+
+            // Native Args
             var native = app.Option("-n|--native", "Compiles source to native machine code.", CommandOptionType.NoValue);
+            var arch = app.Option("-a|--arch <ARCH>", "The architecture for which to compile. x64 only currently supported.", CommandOptionType.SingleValue);
+            var ilcArgs = app.Option("--ilcargs <ARGS>", "Command line arguments to be passed directly to ILCompiler.", CommandOptionType.SingleValue);
+            var ilcPath = app.Option("--ilcpath <PATH>", "Path to the folder containing custom built ILCompiler.", CommandOptionType.SingleValue);
+            var cppMode = app.Option("--cpp", "Flag to do native compilation with C++ code generator.", CommandOptionType.NoValue);
 
             app.OnExecute(() =>
             {
@@ -48,8 +54,13 @@ namespace Microsoft.DotNet.Tools.Compiler
 
                 var buildProjectReferences = !noProjectDependencies.HasValue();
                 var isNative = native.HasValue();
+                var isCppMode = cppMode.HasValue();
+                var archValue = arch.Value();
+                var ilcArgsValue = ilcArgs.Value();
+                var ilcPathValue = ilcPath.Value();
                 var configValue = configuration.Value() ?? Constants.DefaultConfiguration;
                 var outputValue = output.Value();
+                var intermediateValue = intermediateOutput.Value();
 
                 // Load project contexts for each framework and compile them
                 bool success = true;
@@ -61,7 +72,7 @@ namespace Microsoft.DotNet.Tools.Compiler
                     success &= Compile(context, configValue, outputValue, intermediateOutput.Value(), buildProjectReferences);
                     if (isNative && success)
                     {
-                        success &= CompileNative(context, configValue, outputValue, buildProjectReferences);
+                        success &= CompileNative(context, configValue, outputValue, buildProjectReferences, intermediateValue, archValue, ilcArgsValue, ilcPathValue, isCppMode);
                     }
                 }
 
@@ -83,15 +94,86 @@ namespace Microsoft.DotNet.Tools.Compiler
             }
         }
 
-        private static bool CompileNative(ProjectContext context, string configuration, string outputOptionValue, bool buildProjectReferences)
+        private static bool CompileNative(
+            ProjectContext context, 
+            string configuration, 
+            string outputOptionValue, 
+            bool buildProjectReferences, 
+            string intermediateOutputValue, 
+            string archValue, 
+            string ilcArgsValue, 
+            string ilcPathValue,
+            bool isCppMode)
         {
-            string outputPath = Path.Combine(GetOutputPath(context, configuration, outputOptionValue), "native");
+            var outputPath = GetOutputPath(context, configuration, outputOptionValue);
+            var nativeOutputPath = Path.Combine(GetOutputPath(context, configuration, outputOptionValue), "native");
+            var intermediateOutputPath = 
+                GetIntermediateOutputPath(context, configuration, intermediateOutputValue, outputOptionValue);
+
+            Directory.CreateDirectory(nativeOutputPath);
+            Directory.CreateDirectory(intermediateOutputPath);
 
             var compilationOptions = context.ProjectFile.GetCompilerOptions(context.TargetFramework, configuration);
-            var managedBinaryPath = Path.Combine(outputPath, context.ProjectFile.Name + (compilationOptions.EmitEntryPoint.GetValueOrDefault() ? ".exe" : ".dll"));
+            var managedOutput = 
+                GetProjectOutput(context.ProjectFile, context.TargetFramework, configuration, outputPath);
+            
+            var nativeArgs = new List<string>();
+
+            // Input Assembly
+            nativeArgs.Add($"{managedOutput}");
+
+            // ILC Args
+            if (!string.IsNullOrWhiteSpace(ilcArgsValue))
+            {
+                nativeArgs.Add("--ilcargs");
+                nativeArgs.Add($"{ilcArgsValue}");
+            }            
+            
+            // ILC Path
+            if (!string.IsNullOrWhiteSpace(ilcPathValue))
+            {
+                nativeArgs.Add("--ilcpath");
+                nativeArgs.Add(ilcPathValue);
+            }
+
+            // CodeGen Mode
+            if(isCppMode)
+            {
+                nativeArgs.Add("--mode");
+                nativeArgs.Add("cpp");
+            }
+
+            // Configuration
+            if (configuration != null)
+            {
+                nativeArgs.Add("--configuration");
+                nativeArgs.Add(configuration);
+            }
+
+            // Architecture
+            if (archValue != null)
+            {
+                nativeArgs.Add("--arch");
+                nativeArgs.Add(archValue);
+            }
+
+            // Intermediate Path
+            nativeArgs.Add("--temp-output");
+            nativeArgs.Add($"{intermediateOutputPath}");
+
+            // Output Path
+            nativeArgs.Add("--output");
+            nativeArgs.Add($"{nativeOutputPath}");            
+
+            // Write Response File
+            var rsp = Path.Combine(intermediateOutputPath, $"dotnet-compile-native.{context.ProjectFile.Name}.rsp");
+            File.WriteAllLines(rsp, nativeArgs);
+
+            // TODO Add -r assembly.dll for all Nuget References
+            //     Need CoreRT Framework published to nuget
 
             // Do Native Compilation
-            var result = Command.Create($"dotnet-compile-native", $"\"{managedBinaryPath}\" \"{outputPath}\"")
+            var result = Command.Create("dotnet-compile-native", $"--rsp \"{rsp}\"")
                                 .ForwardStdErr()
                                 .ForwardStdOut()
                                 .Execute();
@@ -146,6 +228,11 @@ namespace Microsoft.DotNet.Tools.Compiler
                 projects.Clear();
             }
 
+            return CompileProject(context, configuration, outputPath, intermediateOutputPath, dependencies);
+        }
+
+        private static bool CompileProject(ProjectContext context, string configuration, string outputPath, string intermediateOutputPath, List<LibraryExport> dependencies)
+        {
             Reporter.Output.WriteLine($"Compiling {context.RootProject.Identity.Name.Yellow()} for {context.TargetFramework.DotNetFrameworkName.Yellow()}");
             var sw = Stopwatch.StartNew();
 
@@ -173,9 +260,7 @@ namespace Microsoft.DotNet.Tools.Compiler
             }
 
             // Dump dependency data
-            // TODO: Turn on only if verbose, we can look at the response
-            // file anyways
-            // ShowDependencyInfo(dependencies);
+            ShowDependencyInfo(dependencies);
 
             // Get compilation options
             var outputName = GetProjectOutput(context.ProjectFile, context.TargetFramework, configuration, outputPath);
@@ -194,7 +279,7 @@ namespace Microsoft.DotNet.Tools.Compiler
                 // Resolve full path to key file
                 compilationOptions.KeyFile = Path.GetFullPath(Path.Combine(context.ProjectFile.ProjectDirectory, compilationOptions.KeyFile));
             }
-            
+
             // Add compilation options to the args
             compilerArgs.AddRange(compilationOptions.SerializeToArgs());
 
@@ -233,33 +318,46 @@ namespace Microsoft.DotNet.Tools.Compiler
             var rsp = Path.Combine(intermediateOutputPath, $"dotnet-compile.{context.ProjectFile.Name}.rsp");
             File.WriteAllLines(rsp, compilerArgs);
 
-            var result = Command.Create($"dotnet-compile-{compilerName}", $"@\"{rsp}\"")
-                                 .OnErrorLine(line =>
-                                 {
-                                     var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
-                                     if (diagnostic != null)
-                                     {
-                                         diagnostics.Add(diagnostic);
-                                     }
-                                     else
-                                     {
-                                         Reporter.Error.WriteLine(line);
-                                     }
-                                 })
-                                 .OnOutputLine(line =>
-                                 {
-                                     var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
+            // Run pre-compile event
+            var contextVariables = new Dictionary<string, string>()
+            {
+                { "compile:TargetFramework", context.TargetFramework.DotNetFrameworkName },
+                { "compile:Configuration", configuration },
+                { "compile:OutputFile", outputName },
+                { "compile:OutputDir", outputPath },
+                { "compile:ResponseFile", rsp }
+            };
+            RunScripts(context, ScriptNames.PreCompile, contextVariables);
 
-                                     if (diagnostic != null)
-                                     {
-                                         diagnostics.Add(diagnostic);
-                                     }
-                                     else
-                                     {
-                                         Reporter.Output.WriteLine(line);
-                                     }
-                                 })
-                                 .Execute();
+            var result = Command.Create($"dotnet-compile-{compilerName}", $"@\"{rsp}\"")
+                .OnErrorLine(line =>
+                {
+                    var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
+                    if (diagnostic != null)
+                    {
+                        diagnostics.Add(diagnostic);
+                    }
+                    else
+                    {
+                        Reporter.Error.WriteLine(line);
+                    }
+                })
+                .OnOutputLine(line =>
+                {
+                    var diagnostic = ParseDiagnostic(context.ProjectDirectory, line);
+                    if (diagnostic != null)
+                    {
+                        diagnostics.Add(diagnostic);
+                    }
+                    else
+                    {
+                        Reporter.Output.WriteLine(line);
+                    }
+                }).Execute();
+
+            // Run post-compile event
+            contextVariables["compile:CompilerExitCode"] = result.ExitCode.ToString();
+            RunScripts(context, ScriptNames.PostCompile, contextVariables);
 
             var success = result.ExitCode == 0;
 
@@ -272,6 +370,17 @@ namespace Microsoft.DotNet.Tools.Compiler
             }
 
             return PrintSummary(diagnostics, sw, success);
+        }
+
+        private static void RunScripts(ProjectContext context, string name, Dictionary<string, string> contextVariables)
+        {
+            foreach (var script in context.ProjectFile.Scripts.GetOrEmpty(name))
+            {
+                ScriptExecutor.CreateCommandForScript(context.ProjectFile, script, contextVariables)
+                    .ForwardStdErr()
+                    .ForwardStdOut()
+                    .Execute();
+            }
         }
 
         private static string GetProjectOutput(Project project, NuGetFramework framework, string configuration, string outputPath)
@@ -579,7 +688,7 @@ namespace Microsoft.DotNet.Tools.Compiler
                 PrintDiagnostic(diag);
             }
         }
-        
+
         private static void PrintDiagnostic(DiagnosticMessage diag)
         {
             switch (diag.Severity)
@@ -598,28 +707,31 @@ namespace Microsoft.DotNet.Tools.Compiler
 
         private static void ShowDependencyInfo(IEnumerable<LibraryExport> dependencies)
         {
-            foreach (var dependency in dependencies)
+            if (CommandContext.IsVerbose())
             {
-                if (!dependency.Library.Resolved)
+                foreach (var dependency in dependencies)
                 {
-                    Reporter.Error.WriteLine($"  Unable to resolve dependency {dependency.Library.Identity.ToString().Red().Bold()}");
-                    Reporter.Error.WriteLine("");
-                }
-                else
-                {
-                    Reporter.Output.WriteLine($"  Using {dependency.Library.Identity.Type.Value.Cyan().Bold()} dependency {dependency.Library.Identity.ToString().Cyan().Bold()}");
-                    Reporter.Output.WriteLine($"    Path: {dependency.Library.Path}");
-
-                    foreach (var metadataReference in dependency.CompilationAssemblies)
+                    if (!dependency.Library.Resolved)
                     {
-                        Reporter.Output.WriteLine($"    Assembly: {metadataReference}");
+                        Reporter.Verbose.WriteLine($"  Unable to resolve dependency {dependency.Library.Identity.ToString().Red().Bold()}");
+                        Reporter.Verbose.WriteLine("");
                     }
-
-                    foreach (var sourceReference in dependency.SourceReferences)
+                    else
                     {
-                        Reporter.Output.WriteLine($"    Source: {sourceReference}");
+                        Reporter.Verbose.WriteLine($"  Using {dependency.Library.Identity.Type.Value.Cyan().Bold()} dependency {dependency.Library.Identity.ToString().Cyan().Bold()}");
+                        Reporter.Verbose.WriteLine($"    Path: {dependency.Library.Path}");
+
+                        foreach (var metadataReference in dependency.CompilationAssemblies)
+                        {
+                            Reporter.Verbose.WriteLine($"    Assembly: {metadataReference}");
+                        }
+
+                        foreach (var sourceReference in dependency.SourceReferences)
+                        {
+                            Reporter.Verbose.WriteLine($"    Source: {sourceReference}");
+                        }
+                        Reporter.Verbose.WriteLine("");
                     }
-                    Reporter.Output.WriteLine("");
                 }
             }
         }
